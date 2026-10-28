@@ -17,5 +17,5 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
 
 ## M2, search
 
-- [ ] Filter JSON to SQL compiler with tests
+- [x] Filter JSON to SQL compiler with tests (reference query 238 cards, 1 explained difference with Scryfall, count in 45 ms)
 - [ ] F3 filter builder, F4 multi-criteria sort, simple result grid

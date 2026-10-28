@@ -24,6 +24,14 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 20. **Default print needs a numeric collector number.** Without it, The List reprints (`plst`, `CLB-187`) won the "recent classic" rule.
 21. **The catalog build takes 8 s on the full data** (35k cards, 110k prints, 740k taggings), measured with DuckDB 2.0.0.
 
+## Search
+
+24. **Regexes anchor on each face and each line.** Names and type lines split on ` // `, and `(?m)` makes `^` and `$` match per line. The spec asks for search on every face. Scryfall differs: the reference query `(name:/^dragon/ or t:dragon) id<=brg -otag:removal legal:commander` returns 237 cards, the compiler 238. The extra card is The Dragon-Kami Reborn, whose back face is Dragon-Kami's Egg. Scryfall runs the regex on the full `Front // Back` name. Checked on 2026-10-28.
+25. **"Include child tags" is on by default.** Scryfall `otag:` includes child tags. With children, the reference query matches Scryfall on every other card. Without them, it returns 83 cards more.
+26. **A commander's EDHREC stats merge its solo and pair entries.** On the week window, 131 commanders rank only in partner pairs (Kraum, Ludevic's Opus at 107). The card takes its best rank, the sum of its decks, and the trend of its best entry. A solo-only rule would send these commanders to the end of a sort.
+27. **The server checks regexes, not the front.** JavaScript `RegExp` accepts lookahead, RE2 does not. Before a search runs, the server tests each pattern with DuckDB and returns HTTP 400 with the RE2 message. The search query itself does not run.
+28. **Counts stay under 100 ms on the full catalog.** The reference query counts in 45 ms after warm-up. A five-way OR over a text regex, flavor text, rulings, deck count and artist counts in 85 ms. No index or precomputation.
+
 ## Sync and concurrency
 
 11. **A sync builds a new catalog file and swaps it.** DuckDB allows one writing process per file. The sync writes `catalog.duckdb.new`, validates row counts, then the server detaches the old catalog, renames the file and attaches it again. This replaces the staging-tables design. The CLI `sync` command never opens `user.duckdb`, so it runs while the server is up, and asks the server to reload when it is reachable.
