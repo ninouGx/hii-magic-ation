@@ -202,6 +202,8 @@ fn tag_suggestions_put_prefix_matches_first() {
 
     let suggestions = suggest_tags(&conn, "burn", 50).unwrap();
 
+    assert_eq!(suggestions[0].slug, "burn");
+
     let first_non_prefix = suggestions
         .iter()
         .position(|tag| {

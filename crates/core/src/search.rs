@@ -164,8 +164,9 @@ pub struct TagSuggestion {
     pub cards: i64,
 }
 
-/// Tags whose slug, label or alias contains the text. Prefix matches come
-/// first, then the most used tags.
+/// Tags whose slug, label or alias contains the text. An exact match comes
+/// first even when only its child tags tag cards, then prefix matches, then
+/// the most used tags.
 pub fn suggest_tags(
     conn: &Connection,
     text: &str,
@@ -174,6 +175,7 @@ pub fn suggest_tags(
     let mut stmt = conn.prepare(
         "WITH matched AS (
              SELECT tag_id, slug, label, kind,
+                    lower(slug) = lower($1) OR lower(label) = lower($1) AS exact,
                     starts_with(lower(slug), lower($1)) OR starts_with(lower(label), lower($1)) AS prefix
              FROM catalog.tags
              WHERE contains(lower(slug), lower($1))
@@ -183,8 +185,8 @@ pub fn suggest_tags(
          SELECT m.tag_id, m.slug, m.label, m.kind, count(f.oracle_id) AS cards
          FROM matched AS m
          LEFT JOIN catalog.card_tag_flat AS f ON f.tag_id = m.tag_id
-         GROUP BY m.tag_id, m.slug, m.label, m.kind, m.prefix
-         ORDER BY m.prefix DESC, cards DESC, m.slug
+         GROUP BY m.tag_id, m.slug, m.label, m.kind, m.exact, m.prefix
+         ORDER BY m.exact DESC, m.prefix DESC, cards DESC, m.slug
          LIMIT $2",
     )?;
     stmt.query_map(duckdb::params![text, limit.min(MAX_LIMIT)], |row| {
