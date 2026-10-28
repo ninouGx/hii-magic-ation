@@ -67,6 +67,7 @@ export type CardSummary = {
   mana_cost: string | null
   type_line: string | null
   image_small: string | null
+  double_faced: boolean
   price_eur: number | null
 }
 

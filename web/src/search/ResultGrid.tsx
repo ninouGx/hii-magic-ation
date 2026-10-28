@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { searchCards } from '../api'
+import CardTile from './CardTile'
 import type { ApiGroup } from './fields'
 import type { SortKey } from './urlState'
 
@@ -51,11 +52,7 @@ export default function ResultGrid({ filter, sort }: Props) {
       <ul className="grid">
         {cards.map((card) => (
           <li key={card.oracle_id} title={card.type_line ?? undefined}>
-            {card.image_small ? (
-              <img src={card.image_small} alt={card.name} loading="lazy" width={146} height={204} />
-            ) : (
-              <span className="no-image">{card.name}</span>
-            )}
+            <CardTile card={card} />
           </li>
         ))}
       </ul>

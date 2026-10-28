@@ -72,6 +72,8 @@ pub struct CardSummary {
     pub mana_cost: Option<String>,
     pub type_line: Option<String>,
     pub image_small: Option<String>,
+    /// The print has a back image, under the same URL with `/back/`.
+    pub double_faced: bool,
     pub price_eur: Option<f64>,
 }
 
@@ -91,7 +93,8 @@ pub fn search(conn: &Connection, request: &SearchRequest) -> Result<SearchPage, 
     params.push(Value::UInt(request.limit.min(MAX_LIMIT)));
     params.push(Value::UInt(request.offset));
     let mut stmt = conn.prepare(&format!(
-        "SELECT c.oracle_id, c.name, c.mana_cost, c.type_line, dp.image_small, dp.price_eur::DOUBLE
+        "SELECT c.oracle_id, c.name, c.mana_cost, c.type_line, dp.image_small,
+                c.layout IN ('transform', 'modal_dfc'), dp.price_eur::DOUBLE
          FROM {CARDS_FROM}
          WHERE {}
          ORDER BY {order}
@@ -106,7 +109,8 @@ pub fn search(conn: &Connection, request: &SearchRequest) -> Result<SearchPage, 
                 mana_cost: row.get(2)?,
                 type_line: row.get(3)?,
                 image_small: row.get(4)?,
-                price_eur: row.get(5)?,
+                double_faced: row.get(5)?,
+                price_eur: row.get(6)?,
             })
         })?
         .collect::<Result<_, _>>()?;

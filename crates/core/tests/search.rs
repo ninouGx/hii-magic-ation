@@ -243,3 +243,22 @@ fn exact_alias_counts_as_an_exact_match() {
         "characteristic-defining-ability"
     );
 }
+
+#[test]
+fn transform_and_modal_cards_are_double_faced() {
+    let page = run(json!({ "filter": and(json!([])), "sort": [{ "field": "name" }] }));
+
+    let double_faced: Vec<&str> = page
+        .cards
+        .iter()
+        .filter(|card| card.double_faced)
+        .map(|card| card.name.as_str())
+        .collect();
+    assert_eq!(
+        double_faced,
+        [
+            "Delver of Secrets // Insectile Aberration",
+            "Valki, God of Lies // Tibalt, Cosmic Impostor"
+        ]
+    );
+}
