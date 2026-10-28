@@ -269,8 +269,9 @@ button {
   align-self: start;
 }
 
+/* The whole card fits the window height, whatever the browser zoom. */
 .card-detail-image img {
-  width: 100%;
+  width: min(100%, calc((100dvh - 9rem) * 672 / 936));
   height: auto;
   border-radius: 4.75% / 3.5%;
 }
