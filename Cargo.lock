@@ -970,6 +970,7 @@ dependencies = [
  "hma-ingest",
  "http-body-util",
  "mime_guess",
+ "reqwest",
  "rust-embed",
  "serde",
  "serde_json",
