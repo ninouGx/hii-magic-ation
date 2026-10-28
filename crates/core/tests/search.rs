@@ -2,7 +2,9 @@ mod common;
 
 use common::{and, db, rule};
 use hma_core::filter::FilterError;
-use hma_core::search::{SearchPage, SearchRequest, search};
+use hma_core::search::{
+    SearchPage, SearchRequest, formats, search, suggest_keywords, suggest_tags,
+};
 use serde_json::{Value, json};
 
 fn run(request: Value) -> SearchPage {
@@ -181,4 +183,51 @@ fn invalid_regex_fails_before_the_search() {
     .unwrap_err();
 
     assert!(matches!(error, FilterError::InvalidRegex { .. }));
+}
+
+#[test]
+fn tag_suggestions_match_slug_label_and_alias() {
+    let conn = db().connection().unwrap();
+
+    let suggestions = suggest_tags(&conn, "RAMP", 10).unwrap();
+
+    assert_eq!(suggestions[0].slug, "ramp");
+    assert!(suggestions[0].cards > 0);
+    assert!(suggestions.len() <= 10);
+}
+
+#[test]
+fn tag_suggestions_put_prefix_matches_first() {
+    let conn = db().connection().unwrap();
+
+    let suggestions = suggest_tags(&conn, "burn", 50).unwrap();
+
+    let first_non_prefix = suggestions
+        .iter()
+        .position(|tag| {
+            !tag.slug.starts_with("burn") && !tag.label.to_lowercase().starts_with("burn")
+        })
+        .unwrap_or(suggestions.len());
+    assert!(
+        suggestions[first_non_prefix..]
+            .iter()
+            .all(|tag| !tag.slug.starts_with("burn"))
+    );
+    assert!(first_non_prefix > 0);
+}
+
+#[test]
+fn keyword_suggestions_ignore_case() {
+    let conn = db().connection().unwrap();
+
+    assert_eq!(suggest_keywords(&conn, "FLY", 10).unwrap(), ["Flying"]);
+}
+
+#[test]
+fn formats_come_from_the_legalities() {
+    let formats = formats(&db().connection().unwrap()).unwrap();
+
+    assert!(formats.contains(&"commander".to_owned()));
+    assert!(formats.contains(&"paupercommander".to_owned()));
+    assert!(formats.is_sorted());
 }

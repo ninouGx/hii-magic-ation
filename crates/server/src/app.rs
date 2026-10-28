@@ -10,6 +10,7 @@ use rust_embed::Embed;
 use serde::Serialize;
 
 use crate::catalog_api::{self, SyncStatus};
+use crate::search_api;
 
 #[derive(Embed)]
 #[folder = "../../web/dist"]
@@ -42,6 +43,10 @@ pub fn router(state: AppState) -> Router {
             "/sync",
             get(catalog_api::sync_status).post(catalog_api::start_sync),
         )
+        .route("/cards/search", post(search_api::search))
+        .route("/tags", get(search_api::tags))
+        .route("/keywords", get(search_api::keywords))
+        .route("/formats", get(search_api::formats))
         .fallback(api_not_found);
     Router::new()
         .nest("/api", api)

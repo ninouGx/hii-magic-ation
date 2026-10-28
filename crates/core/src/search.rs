@@ -154,3 +154,75 @@ fn sort_sql(field: SortField, params: &mut Vec<Value>) -> String {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TagSuggestion {
+    pub tag_id: String,
+    pub slug: String,
+    pub label: String,
+    pub kind: String,
+    pub cards: i64,
+}
+
+/// Tags whose slug, label or alias contains the text. Prefix matches come
+/// first, then the most used tags.
+pub fn suggest_tags(
+    conn: &Connection,
+    text: &str,
+    limit: u32,
+) -> Result<Vec<TagSuggestion>, duckdb::Error> {
+    let mut stmt = conn.prepare(
+        "WITH matched AS (
+             SELECT tag_id, slug, label, kind,
+                    starts_with(lower(slug), lower($1)) OR starts_with(lower(label), lower($1)) AS prefix
+             FROM catalog.tags
+             WHERE contains(lower(slug), lower($1))
+                OR contains(lower(label), lower($1))
+                OR contains(lower(array_to_string(aliases, chr(10))), lower($1))
+         )
+         SELECT m.tag_id, m.slug, m.label, m.kind, count(f.oracle_id) AS cards
+         FROM matched AS m
+         LEFT JOIN catalog.card_tag_flat AS f ON f.tag_id = m.tag_id
+         GROUP BY m.tag_id, m.slug, m.label, m.kind, m.prefix
+         ORDER BY m.prefix DESC, cards DESC, m.slug
+         LIMIT $2",
+    )?;
+    stmt.query_map(duckdb::params![text, limit.min(MAX_LIMIT)], |row| {
+        Ok(TagSuggestion {
+            tag_id: row.get(0)?,
+            slug: row.get(1)?,
+            label: row.get(2)?,
+            kind: row.get(3)?,
+            cards: row.get(4)?,
+        })
+    })?
+    .collect()
+}
+
+/// Keywords that contain the text, the most frequent first.
+pub fn suggest_keywords(
+    conn: &Connection,
+    text: &str,
+    limit: u32,
+) -> Result<Vec<String>, duckdb::Error> {
+    let mut stmt = conn.prepare(
+        "SELECT keyword
+         FROM (SELECT unnest(keywords) AS keyword FROM catalog.cards)
+         WHERE contains(lower(keyword), lower($1))
+         GROUP BY keyword
+         ORDER BY starts_with(lower(keyword), lower($1)) DESC, count(*) DESC, keyword
+         LIMIT $2",
+    )?;
+    stmt.query_map(duckdb::params![text, limit.min(MAX_LIMIT)], |row| {
+        row.get(0)
+    })?
+    .collect()
+}
+
+/// Every format in the Scryfall legalities, in alphabetical order.
+pub fn formats(conn: &Connection) -> Result<Vec<String>, duckdb::Error> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT unnest(map_keys(legalities)) AS format FROM catalog.cards ORDER BY format",
+    )?;
+    stmt.query_map([], |row| row.get(0))?.collect()
+}
