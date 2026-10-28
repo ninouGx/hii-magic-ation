@@ -1,7 +1,12 @@
 :root {
   --bg: #ffffff;
   --fg: #1a1a1a;
+  --muted: #666666;
+  --line: #d4d4d4;
+  --surface: #f4f4f4;
+  --danger: #b3261e;
   --space: 1rem;
+  --card-width: 146px;
   font-family: system-ui, sans-serif;
   color-scheme: light dark;
 }
@@ -10,6 +15,10 @@
   :root {
     --bg: #161616;
     --fg: #e8e8e8;
+    --muted: #9a9a9a;
+    --line: #3a3a3a;
+    --surface: #222222;
+    --danger: #f2b8b5;
   }
 }
 
@@ -19,8 +28,128 @@ body {
   color: var(--fg);
 }
 
+.layout {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.layout > nav {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) / 2);
+  padding: var(--space);
+  border-right: 1px solid var(--line);
+}
+
+.layout > nav a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.layout > nav a[aria-current='page'] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 main {
   padding: var(--space);
+  min-width: 0;
+}
+
+@media (max-width: 40rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .layout > nav {
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+input,
+select,
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+[role='alert'] {
+  color: var(--danger);
+}
+
+.queryBuilder .ruleGroup {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.rule-value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) / 2);
+  align-items: center;
+}
+
+.rule-value input[inputmode='decimal'] {
+  width: 6rem;
+}
+
+.hint,
+.result-count {
+  color: var(--muted);
+}
+
+.sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) / 2);
+  align-items: center;
+  margin-block: var(--space);
+}
+
+.sort-key {
+  display: inline-flex;
+  gap: calc(var(--space) / 4);
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+  gap: calc(var(--space) / 2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 146 / 204;
+  border-radius: 4.75% / 3.5%;
+  background: var(--surface);
+}
+
+.grid .no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 146 / 204;
+  padding: calc(var(--space) / 2);
+  border: 1px solid var(--line);
+  border-radius: 4.75% / 3.5%;
+  text-align: center;
 }
 
 .panel table {
