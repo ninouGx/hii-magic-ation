@@ -1,8 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { ValueEditor, type ValueEditorProps } from 'react-querybuilder'
 import { fetchFormats, fetchKeywords, fetchTags } from '../api'
-import { COLORS, FIELD_KINDS, LEGALITY_STATUSES, type LegalityValue, type TagValue } from './fields'
+import {
+  COLORS,
+  FIELD_KINDS,
+  LEGALITY_STATUSES,
+  findTag,
+  tagOptionText,
+  tagSearchText,
+  type LegalityValue,
+  type TagValue,
+} from './fields'
 
 export default function FieldValueEditor(props: ValueEditorProps) {
   switch (FIELD_KINDS[props.field]) {
@@ -121,18 +130,22 @@ function TagEditor({ value, handleOnChange }: ValueEditorProps) {
   const tag = value as TagValue
   const listId = useId()
   const [text, setText] = useState(tag.label)
+  const search = tagSearchText(text)
   const suggestions = useQuery({
-    queryKey: ['tags', text],
-    queryFn: () => fetchTags(text),
-    enabled: text.length >= 2,
+    queryKey: ['tags', search],
+    queryFn: () => fetchTags(search),
+    enabled: search.length >= 2,
     staleTime: 60_000,
   })
-  const optionText = (slug: string, kind: string) => `${slug} (${kind})`
+
+  const resolved = tag.tag_id === '' ? findTag(suggestions.data, text) : undefined
+  useEffect(() => {
+    if (resolved) handleOnChange({ ...tag, tag_id: resolved.tag_id })
+  }, [resolved, tag, handleOnChange])
 
   const onText = (next: string) => {
     setText(next)
-    const match = suggestions.data?.find((option) => optionText(option.slug, option.kind) === next)
-    handleOnChange({ ...tag, tag_id: match?.tag_id ?? '', label: next })
+    handleOnChange({ ...tag, tag_id: findTag(suggestions.data, next)?.tag_id ?? '', label: next })
   }
 
   return (
@@ -147,7 +160,7 @@ function TagEditor({ value, handleOnChange }: ValueEditorProps) {
       />
       <datalist id={listId}>
         {suggestions.data?.map((option) => (
-          <option key={option.tag_id} value={optionText(option.slug, option.kind)}>
+          <option key={option.tag_id} value={tagOptionText(option)}>
             {option.label}, {option.cards} cards
           </option>
         ))}

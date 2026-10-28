@@ -115,11 +115,15 @@ export const DEFAULT_FILTER: RuleGroupType = {
 export type ApiRule = { field: string; operator: string; value: unknown }
 export type ApiGroup = { combinator: string; not?: boolean; rules: (ApiRule | ApiGroup)[] }
 
-/** Drops incomplete rules, so a rule being typed never fails the search. */
+/** Drops incomplete rules and the groups they leave empty, so a rule being
+ * typed never changes the result, even under a NOT. */
 export function toApiFilter(group: RuleGroupType): ApiGroup {
   const rules = group.rules.flatMap<ApiRule | ApiGroup>((node) => {
     if (typeof node === 'string') return []
-    if ('rules' in node) return [toApiFilter(node)]
+    if ('rules' in node) {
+      const nested = toApiFilter(node)
+      return nested.rules.length > 0 ? [nested] : []
+    }
     const rule = toApiRule(node)
     return rule ? [rule] : []
   })
@@ -181,4 +185,13 @@ export function splitList(value: unknown): string[] {
 
 function nonEmpty<T>(list: T[]): T[] | null {
   return list.length > 0 ? list : null
+}
+
+export const tagOptionText = (tag: { slug: string; kind: string }) => `${tag.slug} (${tag.kind})`
+
+/** The API searches slugs and labels, so the kind suffix of an option is left out. */
+export const tagSearchText = (text: string) => text.replace(/ \([a-z]+\)$/, '').trim()
+
+export function findTag<T extends { slug: string; kind: string }>(options: T[] | undefined, text: string) {
+  return options?.find((option) => tagOptionText(option) === text)
 }

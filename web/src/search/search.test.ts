@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RuleGroupType } from 'react-querybuilder'
-import { DEFAULT_FILTER, toApiFilter } from './fields'
+import { DEFAULT_FILTER, findTag, tagSearchText, toApiFilter } from './fields'
 import { DEFAULT_SORT, decodeSearch, encodeSearch } from './urlState'
 
 const group = (rules: RuleGroupType['rules'], not = false): RuleGroupType => ({ combinator: 'and', not, rules })
@@ -28,6 +28,12 @@ describe('toApiFilter', () => {
       { field: 'keywords', operator: 'contains_any', value: [] },
       { field: 'power', operator: 'between', value: ['1', ''] },
     ])
+
+    expect(toApiFilter(filter).rules).toEqual([])
+  })
+
+  it('drops a group left empty, even a negated one', () => {
+    const filter = group([group([{ field: 'tag', operator: 'has', value: { tag_id: '', label: 'rem', include_children: true } }], true)])
 
     expect(toApiFilter(filter).rules).toEqual([])
   })
@@ -108,5 +114,23 @@ describe('URL state', () => {
   it('falls back to defaults on a missing or broken URL', () => {
     expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT })
     expect(decodeSearch('?filter=%7Bnope&sort=[{"field":1}]')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT })
+  })
+})
+
+describe('tag lookup', () => {
+  const options = [
+    { tag_id: 'o', slug: 'removal', kind: 'oracle' },
+    { tag_id: 'a', slug: 'removal', kind: 'art' },
+  ]
+
+  it('searches a pasted option by its slug', () => {
+    expect(tagSearchText('removal (oracle)')).toBe('removal')
+    expect(tagSearchText('removal-creature')).toBe('removal-creature')
+  })
+
+  it('resolves the option text to the tag of that kind', () => {
+    expect(findTag(options, 'removal (art)')?.tag_id).toBe('a')
+    expect(findTag(options, 'removal')).toBeUndefined()
+    expect(findTag(undefined, 'removal (oracle)')).toBeUndefined()
   })
 })
