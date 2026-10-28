@@ -28,6 +28,9 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 
 11. **A sync builds a new catalog file and swaps it.** DuckDB allows one writing process per file. The sync writes `catalog.duckdb.new`, validates row counts, then the server detaches the old catalog, renames the file and attaches it again. This replaces the staging-tables design. The CLI `sync` command never opens `user.duckdb`, so it runs while the server is up, and asks the server to reload when it is reachable.
 
+22. **No `sync_state` table.** Each raw source keeps a `manifest.json` (Scryfall bulk `updated_at`, EDHREC fetch time per window) beside its files, and `/api/catalog` exposes the bulk versions. The catalog stays a pure function of the raw directory, so it needs no state of its own.
+23. **Validation covers keys and null rates, not every column.** A build fails on missing keys or legalities, duplicate oracle_ids, empty tables, more than 1 % of cards without `type_line` or `cmc`, or more than 5 % of prints without `image_small`. Other renamed fields would load as nulls and show in the counters.
+
 ## Performance
 
 12. **No precomputation before a measurement.** The catalog holds about 39k cards and 740k taggings. F6 evaluates the filter once into a temporary table of oracle_ids, then runs the aggregations on it. Precomputed reference distributions for the lift come only if the 500 ms target fails.
