@@ -12,13 +12,16 @@ pub const SCRYFALL_BULKS: [&str; 5] = [
     "art_tags",
 ];
 
-const STEPS: [(&str, &str); 5] = [
+const SCRYFALL_STEPS: [(&str, &str); 5] = [
     ("cards", include_str!("../sql/01_cards.sql")),
     ("prints", include_str!("../sql/02_prints.sql")),
     ("rulings", include_str!("../sql/03_rulings.sql")),
     ("tags", include_str!("../sql/04_tags.sql")),
-    ("validate", include_str!("../sql/05_validate.sql")),
+    ("edhrec_schema", include_str!("../sql/05_edhrec_schema.sql")),
 ];
+const EDHREC_STEP: (&str, &str) = ("edhrec", include_str!("../sql/06_edhrec.sql"));
+const VALIDATE_STEP: (&str, &str) = ("validate", include_str!("../sql/07_validate.sql"));
+const EDHREC_PAGES: &str = "edhrec_commander_pages";
 
 #[derive(Debug, thiserror::Error)]
 pub enum CatalogError {
@@ -55,6 +58,32 @@ impl RawLayout {
     pub fn scryfall_file(&self, bulk: &str) -> PathBuf {
         self.scryfall_dir().join(format!("{bulk}.jsonl.gz"))
     }
+
+    #[must_use]
+    pub fn edhrec_commanders_dir(&self) -> PathBuf {
+        self.root.join("edhrec").join("commanders")
+    }
+
+    fn edhrec_commander_pages(&self) -> Vec<PathBuf> {
+        let Ok(windows) = std::fs::read_dir(self.edhrec_commanders_dir()) else {
+            return Vec::new();
+        };
+        let mut pages: Vec<PathBuf> = windows
+            .flatten()
+            .filter(|entry| {
+                entry.path().is_dir()
+                    && entry
+                        .file_name()
+                        .to_str()
+                        .is_some_and(|name| crate::edhrec::WINDOWS.contains(&name))
+            })
+            .filter_map(|entry| std::fs::read_dir(entry.path()).ok())
+            .flat_map(|dir| dir.flatten().map(|page| page.path()))
+            .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
+            .collect();
+        pages.sort();
+        pages
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -67,6 +96,8 @@ pub struct CatalogCounts {
     pub oracle_tags: i64,
     pub art_tags: i64,
     pub card_tags: i64,
+    pub edhrec_ranks: i64,
+    pub edhrec_unresolved: i64,
 }
 
 impl CatalogCounts {
@@ -82,7 +113,9 @@ impl CatalogCounts {
                     (SELECT count(*) FROM {schema}.rulings),
                     (SELECT count(*) FROM {schema}.tags WHERE kind = 'oracle'),
                     (SELECT count(*) FROM {schema}.tags WHERE kind = 'art'),
-                    (SELECT count(*) FROM {schema}.card_tags)"
+                    (SELECT count(*) FROM {schema}.card_tags),
+                    (SELECT count(*) FROM {schema}.edhrec_commander_ranks),
+                    (SELECT count(*) FROM {schema}.edhrec_unresolved)"
             ),
             [],
             |row| {
@@ -95,6 +128,8 @@ impl CatalogCounts {
                     oracle_tags: row.get(5)?,
                     art_tags: row.get(6)?,
                     card_tags: row.get(7)?,
+                    edhrec_ranks: row.get(8)?,
+                    edhrec_unresolved: row.get(9)?,
                 })
             },
         )
@@ -102,6 +137,7 @@ impl CatalogCounts {
 }
 
 /// Writes a complete catalog to `out`, replacing any previous file there.
+/// EDHREC pages are optional, without them the ranking tables stay empty.
 /// The connection is closed on return, so `out` can be renamed and attached.
 pub fn build(raw: &RawLayout, out: &Path) -> Result<CatalogCounts, CatalogError> {
     for bulk in SCRYFALL_BULKS {
@@ -112,9 +148,16 @@ pub fn build(raw: &RawLayout, out: &Path) -> Result<CatalogCounts, CatalogError>
     }
     remove_database_files(out)?;
 
+    let edhrec_pages = raw.edhrec_commander_pages();
+    let mut steps = SCRYFALL_STEPS.to_vec();
+    if !edhrec_pages.is_empty() {
+        steps.push(EDHREC_STEP);
+    }
+    steps.push(VALIDATE_STEP);
+
     let conn = Connection::open(out)?;
-    for (step, sql) in STEPS {
-        conn.execute_batch(&bind_raw_paths(sql, raw))
+    for (step, sql) in steps {
+        conn.execute_batch(&bind_raw_paths(sql, raw, &edhrec_pages))
             .map_err(|source| CatalogError::Step { step, source })?;
     }
     let counts = CatalogCounts::read(&conn, "main")?;
@@ -140,8 +183,14 @@ pub fn wal_path(path: &Path) -> PathBuf {
     PathBuf::from(wal)
 }
 
-fn bind_raw_paths(sql: &str, raw: &RawLayout) -> String {
-    SCRYFALL_BULKS.iter().fold(sql.to_owned(), |sql, bulk| {
+fn bind_raw_paths(sql: &str, raw: &RawLayout, edhrec_pages: &[PathBuf]) -> String {
+    let pages = edhrec_pages
+        .iter()
+        .map(|page| sql_string_literal(&page.to_string_lossy()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = sql.replace(&format!("${EDHREC_PAGES}"), &format!("[{pages}]"));
+    SCRYFALL_BULKS.iter().fold(sql, |sql, bulk| {
         let path = raw.scryfall_file(bulk);
         sql.replace(
             &format!("${bulk}"),

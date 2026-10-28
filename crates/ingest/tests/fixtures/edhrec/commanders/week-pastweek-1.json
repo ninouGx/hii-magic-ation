@@ -1,0 +1,19 @@
+{
+ "cardviews": [
+  {
+   "id": "00000000-0000-0000-0000-000000000000",
+   "name": "Unknown Commander Two",
+   "sanitized": "unknown",
+   "slug": "lord-of-the-nazgul",
+   "url": "/commanders/lord-of-the-nazgul",
+   "image_version": "1783916019",
+   "num_decks": 332,
+   "potential_decks": 0,
+   "rank": 200,
+   "trend_zscore": 0.020694887499563747
+  }
+ ],
+ "is_paginated": true,
+ "total_pages": 45,
+ "more": null
+}

@@ -4,5 +4,6 @@
 )]
 
 pub mod catalog;
+pub mod edhrec;
 pub mod scryfall;
 pub mod verify;

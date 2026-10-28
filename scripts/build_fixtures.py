@@ -16,7 +16,10 @@ from pathlib import Path
 USER_AGENT = "hii-magic-ation-fixtures/0.1"
 BULK_INDEX = "https://api.scryfall.com/bulk-data"
 BULK_TYPES = ["oracle_cards", "default_cards", "rulings", "oracle_tags", "art_tags"]
-OUT_DIR = Path(__file__).resolve().parent.parent / "crates/ingest/tests/fixtures/scryfall"
+FIXTURES = Path(__file__).resolve().parent.parent / "crates/ingest/tests/fixtures"
+OUT_DIR = FIXTURES / "scryfall"
+EDHREC_PAGES = "https://json.edhrec.com/pages/"
+EDHREC_DIR = FIXTURES / "edhrec"
 
 CARD_NAMES = [
     "Delver of Secrets // Insectile Aberration",
@@ -96,6 +99,44 @@ def slice_tags(path, target_key, targets):
     return list(kept.values())
 
 
+def edhrec_page(path):
+    time.sleep(1)
+    return json.loads(get(EDHREC_PAGES + path))
+
+
+def keep_views(views, names, unknown):
+    kept = [v for v in views if v["name"] in names or set(v.get("names", [])) <= names and v.get("names")]
+    kept.append({**views[-1], "id": "00000000-0000-0000-0000-000000000000", "name": unknown, "sanitized": "unknown"})
+    return kept
+
+
+def write_edhrec(path, page):
+    out = EDHREC_DIR / path
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(page, ensure_ascii=False, indent=1))
+    print(f"edhrec {path}")
+
+
+def build_edhrec_fixtures(names):
+    """Page 1 nests the list under container.json_dict.cardlists[0], page 2 is flat."""
+    first = edhrec_page("commanders/week.json")
+    second_path = first["container"]["json_dict"]["cardlists"][0]["more"]
+    second = edhrec_page(second_path)
+
+    first_list = first["container"]["json_dict"]["cardlists"][0]
+    first_list["cardviews"] = keep_views(first_list["cardviews"], names, "Unknown Commander One")
+    write_edhrec("commanders/week.json", first)
+
+    second["cardviews"] = keep_views(second["cardviews"], names, "Unknown Commander Two")
+    second["more"] = None
+    write_edhrec(second_path, second)
+
+    for window in ("month", "year"):
+        page = json.loads(json.dumps(first))
+        page["container"]["json_dict"]["cardlists"][0]["more"] = None
+        write_edhrec(f"commanders/{window}.json", page)
+
+
 def main():
     paths = download_bulks(Path(sys.argv[1]))
 
@@ -115,6 +156,7 @@ def main():
     write_jsonl("rulings", rulings)
     write_jsonl("oracle_tags", slice_tags(paths["oracle_tags"], "oracle_id", oracle_ids))
     write_jsonl("art_tags", slice_tags(paths["art_tags"], "illustration_id", illustration_ids))
+    build_edhrec_fixtures(wanted)
 
 
 if __name__ == "__main__":

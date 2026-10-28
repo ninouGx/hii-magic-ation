@@ -43,6 +43,8 @@ fn builds_every_table_from_raw_files() {
             oracle_tags: 218,
             art_tags: 856,
             card_tags: 1685,
+            edhrec_ranks: 0,
+            edhrec_unresolved: 0,
         }
     );
 }

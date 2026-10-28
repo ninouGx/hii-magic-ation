@@ -1,0 +1,431 @@
+{
+ "related_info": [
+  {
+   "header": "Monocolor",
+   "items": [
+    {
+     "colors": [
+      "w"
+     ],
+     "count": 299554,
+     "textLeft": "Mono-White",
+     "url": "/commanders/mono-white"
+    },
+    {
+     "colors": [
+      "u"
+     ],
+     "count": 308278,
+     "textLeft": "Mono-Blue",
+     "url": "/commanders/mono-blue"
+    },
+    {
+     "colors": [
+      "b"
+     ],
+     "count": 426736,
+     "textLeft": "Mono-Black",
+     "url": "/commanders/mono-black"
+    },
+    {
+     "colors": [
+      "r"
+     ],
+     "count": 386459,
+     "textLeft": "Mono-Red",
+     "url": "/commanders/mono-red"
+    },
+    {
+     "colors": [
+      "g"
+     ],
+     "count": 346943,
+     "textLeft": "Mono-Green",
+     "url": "/commanders/mono-green"
+    },
+    {
+     "colors": [
+      "c"
+     ],
+     "count": 97562,
+     "textLeft": "Colorless",
+     "url": "/commanders/colorless"
+    }
+   ]
+  },
+  {
+   "header": "Two Color",
+   "items": [
+    {
+     "colors": [
+      "w",
+      "u"
+     ],
+     "count": 329967,
+     "textLeft": "Azorius",
+     "url": "/commanders/azorius"
+    },
+    {
+     "colors": [
+      "u",
+      "b"
+     ],
+     "count": 405993,
+     "textLeft": "Dimir",
+     "url": "/commanders/dimir"
+    },
+    {
+     "colors": [
+      "b",
+      "r"
+     ],
+     "count": 440977,
+     "textLeft": "Rakdos",
+     "url": "/commanders/rakdos"
+    },
+    {
+     "colors": [
+      "r",
+      "g"
+     ],
+     "count": 366422,
+     "textLeft": "Gruul",
+     "url": "/commanders/gruul"
+    },
+    {
+     "colors": [
+      "g",
+      "w"
+     ],
+     "count": 299168,
+     "textLeft": "Selesnya",
+     "url": "/commanders/selesnya"
+    },
+    {
+     "colors": [
+      "w",
+      "b"
+     ],
+     "count": 383766,
+     "textLeft": "Orzhov",
+     "url": "/commanders/orzhov"
+    },
+    {
+     "colors": [
+      "u",
+      "r"
+     ],
+     "count": 422129,
+     "textLeft": "Izzet",
+     "url": "/commanders/izzet"
+    },
+    {
+     "colors": [
+      "b",
+      "g"
+     ],
+     "count": 478808,
+     "textLeft": "Golgari",
+     "url": "/commanders/golgari"
+    },
+    {
+     "colors": [
+      "r",
+      "w"
+     ],
+     "count": 379319,
+     "textLeft": "Boros",
+     "url": "/commanders/boros"
+    },
+    {
+     "colors": [
+      "g",
+      "u"
+     ],
+     "count": 385176,
+     "textLeft": "Simic",
+     "url": "/commanders/simic"
+    }
+   ]
+  },
+  {
+   "header": "Three Color",
+   "items": [
+    {
+     "colors": [
+      "w",
+      "u",
+      "b"
+     ],
+     "count": 453171,
+     "textLeft": "Esper",
+     "url": "/commanders/esper"
+    },
+    {
+     "colors": [
+      "u",
+      "b",
+      "r"
+     ],
+     "count": 481731,
+     "textLeft": "Grixis",
+     "url": "/commanders/grixis"
+    },
+    {
+     "colors": [
+      "b",
+      "r",
+      "g"
+     ],
+     "count": 293040,
+     "textLeft": "Jund",
+     "url": "/commanders/jund"
+    },
+    {
+     "colors": [
+      "r",
+      "g",
+      "w"
+     ],
+     "count": 421048,
+     "textLeft": "Naya",
+     "url": "/commanders/naya"
+    },
+    {
+     "colors": [
+      "g",
+      "w",
+      "u"
+     ],
+     "count": 329153,
+     "textLeft": "Bant",
+     "url": "/commanders/bant"
+    },
+    {
+     "colors": [
+      "w",
+      "b",
+      "g"
+     ],
+     "count": 251656,
+     "textLeft": "Abzan",
+     "url": "/commanders/abzan"
+    },
+    {
+     "colors": [
+      "u",
+      "r",
+      "w"
+     ],
+     "count": 365564,
+     "textLeft": "Jeskai",
+     "url": "/commanders/jeskai"
+    },
+    {
+     "colors": [
+      "b",
+      "g",
+      "u"
+     ],
+     "count": 369511,
+     "textLeft": "Sultai",
+     "url": "/commanders/sultai"
+    },
+    {
+     "colors": [
+      "r",
+      "w",
+      "b"
+     ],
+     "count": 406828,
+     "textLeft": "Mardu",
+     "url": "/commanders/mardu"
+    },
+    {
+     "colors": [
+      "g",
+      "u",
+      "r"
+     ],
+     "count": 334520,
+     "textLeft": "Temur",
+     "url": "/commanders/temur"
+    }
+   ]
+  },
+  {
+   "header": "Four / Five Color",
+   "items": [
+    {
+     "colors": [
+      "w",
+      "u",
+      "b",
+      "r"
+     ],
+     "count": 62413,
+     "textLeft": "Yore-Tiller",
+     "url": "/commanders/yore-tiller"
+    },
+    {
+     "colors": [
+      "u",
+      "b",
+      "r",
+      "g"
+     ],
+     "count": 18733,
+     "textLeft": "Glint-Eye",
+     "url": "/commanders/glint-eye"
+    },
+    {
+     "colors": [
+      "b",
+      "r",
+      "g",
+      "w"
+     ],
+     "count": 16153,
+     "textLeft": "Dune-Brood",
+     "url": "/commanders/dune-brood"
+    },
+    {
+     "colors": [
+      "r",
+      "g",
+      "w",
+      "u"
+     ],
+     "count": 79107,
+     "textLeft": "Ink-Treader",
+     "url": "/commanders/ink-treader"
+    },
+    {
+     "colors": [
+      "g",
+      "w",
+      "u",
+      "b"
+     ],
+     "count": 80999,
+     "textLeft": "Witch-Maw",
+     "url": "/commanders/witch-maw"
+    },
+    {
+     "colors": [
+      "w",
+      "u",
+      "b",
+      "r",
+      "g"
+     ],
+     "count": 703243,
+     "textLeft": "Five-Color",
+     "url": "/commanders/five-color"
+    }
+   ]
+  }
+ ],
+ "header": "Top Commanders (Past Week)",
+ "description": "",
+ "container": {
+  "breadcrumb": [
+   {
+    "/commanders/year": "Commanders"
+   },
+   {
+    "/commanders/week": "Past Week"
+   }
+  ],
+  "description": null,
+  "json_dict": {
+   "cardlists": [
+    {
+     "header": "Past Week",
+     "tag": "pastweek",
+     "cardviews": [
+      {
+       "id": "55cd03d9-2535-4cf3-a8b2-1418e1190f4a",
+       "name": "Jace, Multiverse Architect",
+       "sanitized": "jace-multiverse-architect",
+       "slug": "jace-multiverse-architect",
+       "url": "/commanders/jace-multiverse-architect",
+       "image_version": "1789644316",
+       "num_decks": 3173,
+       "potential_decks": 0,
+       "rank": 1,
+       "trend_zscore": 42.33648957775357
+      },
+      {
+       "id": "c7f2c2d5-e052-49e8-b5de-712858c2ea78",
+       "name": "Y'shtola, Night's Blessed",
+       "sanitized": "yshtola-nights-blessed",
+       "slug": "yshtola-nights-blessed",
+       "url": "/commanders/yshtola-nights-blessed",
+       "image_version": "1783906373",
+       "num_decks": 2019,
+       "potential_decks": 0,
+       "rank": 2,
+       "trend_zscore": 0.04388119950427274
+      },
+      {
+       "id": "d0d33d52-3d28-4635-b985-51e126289259",
+       "name": "Atraxa, Praetors' Voice",
+       "sanitized": "atraxa-praetors-voice",
+       "slug": "atraxa-praetors-voice",
+       "url": "/commanders/atraxa-praetors-voice",
+       "image_version": "1783930136",
+       "num_decks": 1020,
+       "potential_decks": 0,
+       "rank": 17,
+       "trend_zscore": 0.03405567543938685
+      },
+      {
+       "id": "328df403-7428-4b17-bdd1-9759fc0f32d8",
+       "name": "Frodo, Adventurous Hobbit // Sam, Loyal Attendant",
+       "sanitized": "frodo-adventurous-hobbit-sam-loyal-attendant",
+       "slug": "frodo-adventurous-hobbit-sam-loyal-attendant",
+       "url": "/commanders/frodo-adventurous-hobbit-sam-loyal-attendant",
+       "image_version": "1783916041",
+       "cards": [
+        {
+         "name": "Frodo, Adventurous Hobbit",
+         "url": "frodo-adventurous-hobbit"
+        },
+        {
+         "name": "Sam, Loyal Attendant",
+         "url": "sam-loyal-attendant"
+        }
+       ],
+       "is_partner": true,
+       "names": [
+        "Frodo, Adventurous Hobbit",
+        "Sam, Loyal Attendant"
+       ],
+       "num_decks": 943,
+       "potential_decks": 0,
+       "rank": 25,
+       "trend_zscore": 1.8495966382184355
+      },
+      {
+       "id": "00000000-0000-0000-0000-000000000000",
+       "name": "Unknown Commander One",
+       "sanitized": "unknown",
+       "slug": "the-great-goblin",
+       "url": "/commanders/the-great-goblin",
+       "image_version": "1784798171",
+       "num_decks": 509,
+       "potential_decks": 0,
+       "rank": 100,
+       "trend_zscore": -0.19486640540238478
+      }
+     ],
+     "total_pages": 45,
+     "more": null
+    }
+   ]
+  },
+  "keywords": "Top,Commanders,Past,Week",
+  "title": "Top Commanders (Past Week)"
+ }
+}
