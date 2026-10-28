@@ -494,3 +494,80 @@ fn num_decks_compares_per_period() {
     assert_eq!(names_where("num_decks_month", "=", json!(943)).len(), 2);
     assert_eq!(names_where("num_decks_year", ">", json!(3000)).len(), 1);
 }
+
+#[test]
+fn flavor_text_matches_any_print() {
+    assert_eq!(
+        names_where("flavor_text", "contains", json!("sparkmage")),
+        ["Lightning Bolt"]
+    );
+    assert!(
+        !names_where("flavor_text", "not_contains", json!("sparkmage"))
+            .contains(&"Lightning Bolt".to_owned())
+    );
+    assert_eq!(
+        names_where("flavor_text", "regex", json!("^the sparkmage")),
+        ["Lightning Bolt"]
+    );
+}
+
+#[test]
+fn rulings_match_any_ruling() {
+    assert_eq!(
+        names_where("rulings", "contains", json!("\"partner with\" keyword")),
+        ["Frodo, Adventurous Hobbit", "Sam, Loyal Attendant"]
+    );
+}
+
+#[test]
+fn artist_matches_any_print_ignoring_case() {
+    let rush = names_where("artist", "=", json!("christopher rush"));
+
+    assert!(rush.contains(&"Lightning Bolt".to_owned()));
+    assert!(rush.contains(&"Black Lotus".to_owned()));
+    assert!(!rush.contains(&"Sol Ring".to_owned()));
+}
+
+#[test]
+fn set_and_year_accept_one_value_or_a_list() {
+    let alpha = [
+        "Black Lotus",
+        "Lightning Bolt",
+        "Llanowar Elves",
+        "Shivan Dragon",
+        "Sol Ring",
+    ];
+
+    assert_eq!(names_where("set", "=", json!("LEA")), alpha);
+    assert_eq!(names_where("set", "in", json!(["lea", "nope"])), alpha);
+    assert!(names_where("set", "in", json!([])).is_empty());
+    assert_eq!(names_where("year", "in", json!([1993])), alpha);
+}
+
+#[test]
+fn price_uses_the_default_print() {
+    let conn = db().connection().unwrap();
+    let price: f64 = conn
+        .query_row(
+            "SELECT dp.price_eur::DOUBLE FROM catalog.cards AS c JOIN catalog.prints AS dp ON dp.print_id = c.default_print_id WHERE c.name = 'Lightning Bolt'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+
+    assert!(names_where("price_eur", "=", json!(price)).contains(&"Lightning Bolt".to_owned()));
+    assert!(!names_where("price_eur", ">", json!(price)).contains(&"Lightning Bolt".to_owned()));
+}
+
+#[test]
+fn print_and_ruling_regexes_are_checked() {
+    let conn = db().connection().unwrap();
+    for field in ["flavor_text", "rulings"] {
+        let filter = group(and(json!([rule(field, "regex", json!("(a"))])));
+
+        assert!(matches!(
+            check_regexes(&conn, &filter),
+            Err(FilterError::InvalidRegex { .. })
+        ));
+    }
+}

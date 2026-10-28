@@ -60,6 +60,8 @@ pub enum Rule {
     Name(TextCondition),
     OracleText(TextCondition),
     TypeLine(TextCondition),
+    FlavorText(TextCondition),
+    Rulings(TextCondition),
     Colors(ColorCondition),
     ColorIdentity(ColorCondition),
     Cmc(NumberCondition),
@@ -70,6 +72,10 @@ pub enum Rule {
     Tag(TagCondition),
     CommanderEligible(BoolCondition),
     EdhrecRank(NumberCondition),
+    PriceEur(NumberCondition),
+    Artist(PickCondition<String>),
+    Set(PickCondition<String>),
+    Year(PickCondition<i32>),
     CommanderRankWeek(NumberCondition),
     CommanderRankMonth(NumberCondition),
     CommanderRankYear(NumberCondition),
@@ -173,6 +179,25 @@ pub enum KeywordCondition {
     ContainsAll(Vec<String>),
 }
 
+/// Matches when at least one English print has one of the values.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value")]
+pub enum PickCondition<T> {
+    #[serde(rename = "=")]
+    Eq(T),
+    #[serde(rename = "in")]
+    In(Vec<T>),
+}
+
+impl<T: Clone> PickCondition<T> {
+    fn values(&self) -> Vec<T> {
+        match self {
+            Self::Eq(value) => vec![value.clone()],
+            Self::In(values) => values.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operator", content = "value", rename_all = "snake_case")]
 pub enum TagCondition {
@@ -263,7 +288,9 @@ impl Rule {
         match self {
             Self::Name(TextCondition::Regex(pattern))
             | Self::OracleText(TextCondition::Regex(pattern))
-            | Self::TypeLine(TextCondition::Regex(pattern)) => Some(pattern),
+            | Self::TypeLine(TextCondition::Regex(pattern))
+            | Self::FlavorText(TextCondition::Regex(pattern))
+            | Self::Rulings(TextCondition::Regex(pattern)) => Some(pattern),
             _ => None,
         }
     }
@@ -311,6 +338,12 @@ fn rule_sql(rule: &Rule, params: &mut Vec<Value>) -> String {
             text_sql("c.oracle_text", "c.oracle_text", condition, params)
         }
         Rule::TypeLine(condition) => text_sql("c.type_line", TYPE_LINES, condition, params),
+        Rule::FlavorText(condition) => {
+            any_row_text_sql("catalog.prints", "flavor_text", condition, params)
+        }
+        Rule::Rulings(condition) => {
+            any_row_text_sql("catalog.rulings", "comment", condition, params)
+        }
         Rule::Colors(condition) => color_sql("c.colors", condition, params),
         Rule::ColorIdentity(condition) => color_sql("c.color_identity", condition, params),
         Rule::Cmc(condition) => number_sql("c.cmc", condition, params),
@@ -324,6 +357,38 @@ fn rule_sql(rule: &Rule, params: &mut Vec<Value>) -> String {
         }
         Rule::Tag(condition) => tag_sql(condition, params),
         Rule::EdhrecRank(condition) => number_sql("c.edhrec_rank", condition, params),
+        Rule::PriceEur(condition) => number_sql("dp.price_eur", condition, params),
+        Rule::Artist(condition) => {
+            let list = text_list(
+                condition
+                    .values()
+                    .iter()
+                    .map(|artist| artist.to_lowercase()),
+                params,
+            );
+            any_print_sql(&format!("list_contains({list}, lower(p.artist))"))
+        }
+        Rule::Set(condition) => {
+            let list = text_list(
+                condition.values().iter().map(|set| set.to_lowercase()),
+                params,
+            );
+            any_print_sql(&format!("list_contains({list}, lower(p.set_code))"))
+        }
+        Rule::Year(condition) => {
+            let placeholders: Vec<&str> = condition
+                .values()
+                .into_iter()
+                .map(|year| {
+                    params.push(Value::Int(year));
+                    "?"
+                })
+                .collect();
+            any_print_sql(&format!(
+                "list_contains([{}]::INTEGER[], year(p.released_at))",
+                placeholders.join(", ")
+            ))
+        }
         Rule::CommanderRankWeek(condition) => {
             edhrec_sql(EdhrecStat::Rank, Period::Week, condition, params)
         }
@@ -351,18 +416,50 @@ fn text_sql(
     condition: &TextCondition,
     params: &mut Vec<Value>,
 ) -> String {
+    let (negation, matches) = text_match(column, lines, condition, params);
+    format!("{negation}{matches}")
+}
+
+/// "Does not contain" holds when no row contains the text.
+fn any_row_text_sql(
+    table: &str,
+    column: &str,
+    condition: &TextCondition,
+    params: &mut Vec<Value>,
+) -> String {
+    let column = format!("x.{column}");
+    let (negation, matches) = text_match(&column, &column, condition, params);
+    format!(
+        "{negation}EXISTS (SELECT 1 FROM {table} AS x WHERE x.oracle_id = c.oracle_id AND {matches})"
+    )
+}
+
+fn any_print_sql(matches: &str) -> String {
+    format!(
+        "EXISTS (SELECT 1 FROM catalog.prints AS p WHERE p.oracle_id = c.oracle_id AND {matches})"
+    )
+}
+
+/// The positive match, and the negation to put in front of it.
+fn text_match(
+    column: &str,
+    lines: &str,
+    condition: &TextCondition,
+    params: &mut Vec<Value>,
+) -> (&'static str, String) {
     match condition {
-        TextCondition::Contains(text) => {
+        TextCondition::Contains(text) | TextCondition::NotContains(text) => {
             params.push(Value::Text(text.clone()));
-            format!("contains(lower({column}), lower(?))")
-        }
-        TextCondition::NotContains(text) => {
-            params.push(Value::Text(text.clone()));
-            format!("NOT contains(lower({column}), lower(?))")
+            let negation = if matches!(condition, TextCondition::NotContains(_)) {
+                "NOT "
+            } else {
+                ""
+            };
+            (negation, format!("contains(lower({column}), lower(?))"))
         }
         TextCondition::Regex(pattern) => {
             params.push(Value::Text(pattern.clone()));
-            format!("regexp_matches({lines}, '(?m)' || ?, 'i')")
+            ("", format!("regexp_matches({lines}, '(?m)' || ?, 'i')"))
         }
     }
 }
