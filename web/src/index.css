@@ -22,3 +22,25 @@ body {
 main {
   padding: var(--space);
 }
+
+.panel table {
+  border-collapse: collapse;
+}
+
+.panel th,
+.panel td {
+  padding: calc(var(--space) / 4) var(--space);
+  text-align: left;
+}
+
+.panel td {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) / 2);
+  align-items: center;
+}
