@@ -5,3 +5,4 @@
 
 pub mod catalog;
 pub mod scryfall;
+pub mod verify;
