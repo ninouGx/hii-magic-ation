@@ -14,7 +14,7 @@ Local web app to explore every Commander-legal Magic card, build themed card sel
 
 ## Commands
 
-- `scripts/check.sh`: local CI (front lint and build, fmt, clippy, tests). Run it before each commit.
+- `scripts/check.sh`: local CI (front lint, Vitest and build, then fmt, clippy, tests). Run it before each commit.
 - `cargo run -p hii-magic-ation`: serve on 127.0.0.1:7878. Front dev server: `npm run dev` in `web/`, it proxies `/api`.
 - Config: `$XDG_CONFIG_HOME/hii-magic-ation/config.toml`, overridden by `HMA_*` variables. Data: `$XDG_DATA_HOME/hii-magic-ation`.
 

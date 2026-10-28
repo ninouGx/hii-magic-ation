@@ -18,4 +18,9 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
 ## M2, search
 
 - [x] Filter JSON to SQL compiler with tests (reference query 238 cards, 1 explained difference with Scryfall, count in 45 ms)
-- [ ] F3 filter builder, F4 multi-criteria sort, simple result grid
+- [x] F3 filter builder, F4 multi-criteria sort, simple result grid
+  - Search API answers in 75 to 100 ms on the full catalog, reference query included
+  - Week commander rank then mana value on a filtered result, sort kept in the URL
+  - Invalid regex: HTTP 400 with the RE2 message before the search runs, shown at once
+  - Infinite scroll loads all 238 cards of the reference query, 100 per page
+  - Left for later milestones: deck mode (M3, needs selections), custom and AI tags (M4, M5), similarity, synergy and graph rules (M5 to M7)
