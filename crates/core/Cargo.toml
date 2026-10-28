@@ -7,11 +7,13 @@ license.workspace = true
 [dependencies]
 duckdb = "1.20000.0"
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
 thiserror = "2.0.21"
 
 [lints]
 workspace = true
 
 [dev-dependencies]
+hma-ingest = { path = "../ingest" }
 tempfile = "3.27.0"
 

@@ -4,4 +4,5 @@
 )]
 
 pub mod db;
+pub mod filter;
 pub use duckdb;

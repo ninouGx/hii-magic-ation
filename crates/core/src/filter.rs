@@ -1,0 +1,363 @@
+//! Filter trees in the react-querybuilder JSON shape, compiled to a
+//! parameterized SQL condition. User values only ever travel as parameters.
+
+use duckdb::Connection;
+use duckdb::types::Value;
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Source of every column a compiled condition references.
+pub const CARDS_FROM: &str =
+    "catalog.cards AS c LEFT JOIN catalog.prints AS dp ON dp.print_id = c.default_print_id";
+
+#[derive(Debug, thiserror::Error)]
+pub enum FilterError {
+    #[error("invalid regex `{pattern}`: {message}")]
+    InvalidRegex { pattern: String, message: String },
+    #[error(transparent)]
+    Db(#[from] duckdb::Error),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Group {
+    pub combinator: Combinator,
+    #[serde(default)]
+    pub not: bool,
+    pub rules: Vec<Node>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Combinator {
+    And,
+    Or,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum Node {
+    Group(Group),
+    Rule(Rule),
+}
+
+/// A node with `rules` is a group. Deciding up front keeps the rule's own
+/// error message, which an untagged enum would replace with a generic one.
+impl<'de> Deserialize<'de> for Node {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        if value.get("rules").is_some() {
+            Group::deserialize(value).map(Node::Group)
+        } else {
+            Rule::deserialize(value).map(Node::Rule)
+        }
+        .map_err(serde::de::Error::custom)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "field", rename_all = "snake_case")]
+pub enum Rule {
+    Legality(LegalityCondition),
+    Name(TextCondition),
+    OracleText(TextCondition),
+    TypeLine(TextCondition),
+    Colors(ColorCondition),
+    ColorIdentity(ColorCondition),
+    Cmc(NumberCondition),
+    Power(NumberCondition),
+    Toughness(NumberCondition),
+    Loyalty(NumberCondition),
+    Keywords(KeywordCondition),
+    CommanderEligible(BoolCondition),
+    EdhrecRank(NumberCondition),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value")]
+pub enum LegalityCondition {
+    #[serde(rename = "=")]
+    Is(Legality),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Legality {
+    pub format: String,
+    pub status: LegalityStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LegalityStatus {
+    Legal,
+    NotLegal,
+    Banned,
+    Restricted,
+}
+
+impl LegalityStatus {
+    fn code(self) -> &'static str {
+        match self {
+            Self::Legal => "legal",
+            Self::NotLegal => "not_legal",
+            Self::Banned => "banned",
+            Self::Restricted => "restricted",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value", rename_all = "snake_case")]
+pub enum TextCondition {
+    Contains(String),
+    NotContains(String),
+    /// RE2 syntax, case-insensitive, `^` and `$` match at each line and face.
+    Regex(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value", rename_all = "snake_case")]
+pub enum ColorCondition {
+    Exactly(Vec<Color>),
+    Includes(Vec<Color>),
+    AtMost(Vec<Color>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Color {
+    W,
+    U,
+    B,
+    R,
+    G,
+}
+
+impl Color {
+    fn code(self) -> &'static str {
+        match self {
+            Self::W => "W",
+            Self::U => "U",
+            Self::B => "B",
+            Self::R => "R",
+            Self::G => "G",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value")]
+pub enum NumberCondition {
+    #[serde(rename = "=")]
+    Eq(f64),
+    #[serde(rename = "<")]
+    Lt(f64),
+    #[serde(rename = "<=")]
+    Le(f64),
+    #[serde(rename = ">")]
+    Gt(f64),
+    #[serde(rename = ">=")]
+    Ge(f64),
+    #[serde(rename = "between")]
+    Between(f64, f64),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value", rename_all = "snake_case")]
+pub enum KeywordCondition {
+    ContainsAny(Vec<String>),
+    ContainsAll(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value")]
+pub enum BoolCondition {
+    #[serde(rename = "=")]
+    Is(bool),
+}
+
+/// A SQL condition over [`CARDS_FROM`] and the values for its placeholders, in order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Compiled {
+    pub sql: String,
+    pub params: Vec<Value>,
+}
+
+#[must_use]
+pub fn compile(filter: &Group) -> Compiled {
+    let mut params = Vec::new();
+    let sql = group_sql(filter, &mut params);
+    Compiled { sql, params }
+}
+
+/// Fails on the first pattern that RE2 rejects, with the RE2 message.
+pub fn check_regexes(conn: &Connection, filter: &Group) -> Result<(), FilterError> {
+    let mut stmt = conn.prepare("SELECT regexp_matches('', ?)")?;
+    for pattern in regexes(filter) {
+        if let Err(error) = stmt.query_row([pattern], |row| row.get::<_, bool>(0)) {
+            return Err(match error {
+                duckdb::Error::DuckDBFailure(_, Some(message)) => FilterError::InvalidRegex {
+                    pattern: pattern.to_owned(),
+                    message: message
+                        .trim_start_matches("Invalid Input Error: ")
+                        .to_owned(),
+                },
+                other => other.into(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn regexes(group: &Group) -> Vec<&str> {
+    group
+        .rules
+        .iter()
+        .flat_map(|node| match node {
+            Node::Group(group) => regexes(group),
+            Node::Rule(rule) => rule.regex().into_iter().collect(),
+        })
+        .collect()
+}
+
+impl Rule {
+    fn regex(&self) -> Option<&str> {
+        match self {
+            Self::Name(TextCondition::Regex(pattern))
+            | Self::OracleText(TextCondition::Regex(pattern))
+            | Self::TypeLine(TextCondition::Regex(pattern)) => Some(pattern),
+            _ => None,
+        }
+    }
+}
+
+fn group_sql(group: &Group, params: &mut Vec<Value>) -> String {
+    let parts: Vec<String> = group
+        .rules
+        .iter()
+        .map(|node| match node {
+            Node::Group(group) => group_sql(group, params),
+            Node::Rule(rule) => format!("coalesce({}, false)", rule_sql(rule, params)),
+        })
+        .collect();
+    let separator = match group.combinator {
+        Combinator::And => " AND ",
+        Combinator::Or => " OR ",
+    };
+    let body = if parts.is_empty() {
+        "true".to_owned()
+    } else {
+        format!("({})", parts.join(separator))
+    };
+    if group.not {
+        format!("NOT {body}")
+    } else {
+        body
+    }
+}
+
+/// Multi-face names and type lines join faces with ` // `. Regexes see one
+/// line per face, so `^` anchors on every face.
+const NAME_LINES: &str = "replace(c.name, ' // ', chr(10))";
+const TYPE_LINES: &str = "replace(c.type_line, ' // ', chr(10))";
+
+fn rule_sql(rule: &Rule, params: &mut Vec<Value>) -> String {
+    match rule {
+        Rule::Legality(LegalityCondition::Is(legality)) => {
+            params.push(Value::Text(legality.format.clone()));
+            params.push(Value::Text(legality.status.code().to_owned()));
+            "c.legalities[?] = ?".to_owned()
+        }
+        Rule::Name(condition) => text_sql("c.name", NAME_LINES, condition, params),
+        Rule::OracleText(condition) => {
+            text_sql("c.oracle_text", "c.oracle_text", condition, params)
+        }
+        Rule::TypeLine(condition) => text_sql("c.type_line", TYPE_LINES, condition, params),
+        Rule::Colors(condition) => color_sql("c.colors", condition, params),
+        Rule::ColorIdentity(condition) => color_sql("c.color_identity", condition, params),
+        Rule::Cmc(condition) => number_sql("c.cmc", condition, params),
+        Rule::Power(condition) => number_sql("c.power_num", condition, params),
+        Rule::Toughness(condition) => number_sql("c.toughness_num", condition, params),
+        Rule::Loyalty(condition) => number_sql("c.loyalty_num", condition, params),
+        Rule::Keywords(condition) => keyword_sql(condition, params),
+        Rule::CommanderEligible(BoolCondition::Is(value)) => {
+            params.push(Value::Boolean(*value));
+            "c.is_commander_eligible = ?".to_owned()
+        }
+        Rule::EdhrecRank(condition) => number_sql("c.edhrec_rank", condition, params),
+    }
+}
+
+fn text_sql(
+    column: &str,
+    lines: &str,
+    condition: &TextCondition,
+    params: &mut Vec<Value>,
+) -> String {
+    match condition {
+        TextCondition::Contains(text) => {
+            params.push(Value::Text(text.clone()));
+            format!("contains(lower({column}), lower(?))")
+        }
+        TextCondition::NotContains(text) => {
+            params.push(Value::Text(text.clone()));
+            format!("NOT contains(lower({column}), lower(?))")
+        }
+        TextCondition::Regex(pattern) => {
+            params.push(Value::Text(pattern.clone()));
+            format!("regexp_matches({lines}, '(?m)' || ?, 'i')")
+        }
+    }
+}
+
+fn color_sql(column: &str, condition: &ColorCondition, params: &mut Vec<Value>) -> String {
+    let (template, colors) = match condition {
+        ColorCondition::Exactly(colors) => (
+            "list_sort(list_distinct({column})) = list_sort(list_distinct({list}))",
+            colors,
+        ),
+        ColorCondition::Includes(colors) => ("list_has_all({column}, {list})", colors),
+        ColorCondition::AtMost(colors) => ("list_has_all({list}, {column})", colors),
+    };
+    let list = text_list(colors.iter().map(|color| color.code().to_owned()), params);
+    template
+        .replace("{column}", column)
+        .replace("{list}", &list)
+}
+
+fn keyword_sql(condition: &KeywordCondition, params: &mut Vec<Value>) -> String {
+    let (function, keywords) = match condition {
+        KeywordCondition::ContainsAny(keywords) => ("list_has_any", keywords),
+        KeywordCondition::ContainsAll(keywords) => ("list_has_all", keywords),
+    };
+    let list = text_list(
+        keywords.iter().map(|keyword| keyword.to_lowercase()),
+        params,
+    );
+    format!("{function}(list_transform(c.keywords, lambda k: lower(k)), {list})")
+}
+
+/// One placeholder per element: the count is structure, the elements are values.
+fn text_list(values: impl Iterator<Item = String>, params: &mut Vec<Value>) -> String {
+    let placeholders: Vec<&str> = values
+        .map(|value| {
+            params.push(Value::Text(value));
+            "?"
+        })
+        .collect();
+    format!("[{}]::VARCHAR[]", placeholders.join(", "))
+}
+
+fn number_sql(column: &str, condition: &NumberCondition, params: &mut Vec<Value>) -> String {
+    let (operator, value) = match condition {
+        NumberCondition::Eq(value) => ("=", value),
+        NumberCondition::Lt(value) => ("<", value),
+        NumberCondition::Le(value) => ("<=", value),
+        NumberCondition::Gt(value) => (">", value),
+        NumberCondition::Ge(value) => (">=", value),
+        NumberCondition::Between(low, high) => {
+            params.push(Value::Double(*low));
+            params.push(Value::Double(*high));
+            return format!("{column} BETWEEN ? AND ?");
+        }
+    };
+    params.push(Value::Double(*value));
+    format!("{column} {operator} ?")
+}

@@ -986,7 +986,9 @@ name = "hma-core"
 version = "0.1.0"
 dependencies = [
  "duckdb",
+ "hma-ingest",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]
