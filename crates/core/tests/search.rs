@@ -233,3 +233,13 @@ fn formats_come_from_the_legalities() {
     assert!(formats.contains(&"paupercommander".to_owned()));
     assert!(formats.is_sorted());
 }
+
+#[test]
+fn exact_alias_counts_as_an_exact_match() {
+    let conn = db().connection().unwrap();
+
+    assert_eq!(
+        suggest_tags(&conn, "CDA", 10).unwrap()[0].slug,
+        "characteristic-defining-ability"
+    );
+}

@@ -164,7 +164,8 @@ pub struct TagSuggestion {
     pub cards: i64,
 }
 
-/// Tags whose slug, label or alias contains the text. An exact match comes
+/// Tags whose slug, label or alias contains the text. An exact match, alias
+/// included, comes
 /// first even when only its child tags tag cards, then prefix matches, then
 /// the most used tags.
 pub fn suggest_tags(
@@ -175,7 +176,9 @@ pub fn suggest_tags(
     let mut stmt = conn.prepare(
         "WITH matched AS (
              SELECT tag_id, slug, label, kind,
-                    lower(slug) = lower($1) OR lower(label) = lower($1) AS exact,
+                    lower(slug) = lower($1)
+                        OR lower(label) = lower($1)
+                        OR list_contains(list_transform(aliases, lambda a: lower(a)), lower($1)) AS exact,
                     starts_with(lower(slug), lower($1)) OR starts_with(lower(label), lower($1)) AS prefix
              FROM catalog.tags
              WHERE contains(lower(slug), lower($1))
