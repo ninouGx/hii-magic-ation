@@ -36,6 +36,4 @@ Local web app to explore every Commander-legal Magic card, build themed card sel
 
 - `user.duckdb` is the default database and holds data that cannot be rebuilt. `catalog.duckdb` is attached read-only as `catalog` and only a sync replaces it.
 - `Db::connection()` clones a connection on the shared instance. Run each query inside `spawn_blocking`.
-- The `duckdb` crate builds DuckDB from C++ source (`bundled`), about 10 min per cold build on this laptop.
-- Each distinct cargo feature set triggers a new C++ build. Use only `scripts/check.sh`, `cargo test --workspace`, `cargo run -p hii-magic-ation` and `cv`, which are already built. Avoid `-p hma-core` and new feature flags.
-- `.cargo/config.toml` caps jobs at 4. One DuckDB unity file needs up to 1.5 GB of RAM.
+- The `duckdb` crate links the prebuilt libduckdb v2.0.0, downloaded into `target/` by its build script. `cargo test` and `cargo run` find it there. A binary run by hand needs `LD_LIBRARY_PATH` set to that directory. Never enable `bundled`, see `docs/decisions.md`.

@@ -33,5 +33,5 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 
 ## Build
 
-15. **`duckdb` crate with `bundled` and `json` features.** DuckDB builds from C++ source, several minutes per cold profile. The alternative is `download-lib`, which links a prebuilt shared library at runtime and complicates the Docker image.
-16. **The bundled DuckDB is `v2.0.0-dev88614`.** `duckdb` 1.20000.0, the latest crate, ships a development build. Watch for engine bugs, and pin the crate version in `Cargo.lock`.
+15. **DuckDB links the prebuilt official library, not a bundled C++ build.** The `duckdb` crate default feature `download-lib` fetches `duckdb-shared-libs-linux-amd64.tar.gz` from the v2.0.0 release into `target/`, and `cargo test` and `cargo run` find it there. The `bundled` build was tried first and dropped. The build script's host dependencies (`serde`, `serde_json`, `cc`, `tar`, `ureq`) get different features for each cargo invocation (`test`, `run`, `-p`, rust-analyzer check), so each one rebuilt DuckDB from C++. Measured: 9 debug copies, 25.5 GB in `target/`, 23 min for one debug build, and one build killed for lack of RAM. No `bundled` cargo feature either, since `cv` passes `--all-features`.
+16. **The Docker image ships libduckdb (M7).** Either copy `libduckdb.so` beside the binary, or link the official static libs with `DUCKDB_LIB_DIR` and `DUCKDB_STATIC=1` in the image build only.

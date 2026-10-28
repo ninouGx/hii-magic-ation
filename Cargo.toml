@@ -9,7 +9,3 @@ license = "MIT"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-
-# DuckDB C++ unity files with debug info exhaust 8 GB of RAM in a parallel build.
-[profile.dev.package.libduckdb-sys]
-debug = false

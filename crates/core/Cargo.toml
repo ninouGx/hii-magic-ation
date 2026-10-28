@@ -5,7 +5,7 @@ version.workspace = true
 license.workspace = true
 
 [dependencies]
-duckdb = { version = "1.20000.0", features = ["bundled", "json"] }
+duckdb = "1.20000.0"
 serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.21"
 
@@ -14,3 +14,4 @@ workspace = true
 
 [dev-dependencies]
 tempfile = "3.27.0"
+
