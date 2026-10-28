@@ -67,8 +67,15 @@ pub enum Rule {
     Toughness(NumberCondition),
     Loyalty(NumberCondition),
     Keywords(KeywordCondition),
+    Tag(TagCondition),
     CommanderEligible(BoolCondition),
     EdhrecRank(NumberCondition),
+    CommanderRankWeek(NumberCondition),
+    CommanderRankMonth(NumberCondition),
+    CommanderRankYear(NumberCondition),
+    NumDecksWeek(NumberCondition),
+    NumDecksMonth(NumberCondition),
+    NumDecksYear(NumberCondition),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -164,6 +171,40 @@ pub enum NumberCondition {
 pub enum KeywordCondition {
     ContainsAny(Vec<String>),
     ContainsAll(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operator", content = "value", rename_all = "snake_case")]
+pub enum TagCondition {
+    Has(TagRef),
+    HasNot(TagRef),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TagRef {
+    pub tag_id: String,
+    #[serde(default)]
+    pub include_children: bool,
+}
+
+/// EDHREC popularity window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Period {
+    Week,
+    Month,
+    Year,
+}
+
+impl Period {
+    #[must_use]
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Week => "week",
+            Self::Month => "month",
+            Self::Year => "year",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -281,7 +322,26 @@ fn rule_sql(rule: &Rule, params: &mut Vec<Value>) -> String {
             params.push(Value::Boolean(*value));
             "c.is_commander_eligible = ?".to_owned()
         }
+        Rule::Tag(condition) => tag_sql(condition, params),
         Rule::EdhrecRank(condition) => number_sql("c.edhrec_rank", condition, params),
+        Rule::CommanderRankWeek(condition) => {
+            edhrec_sql(EdhrecStat::Rank, Period::Week, condition, params)
+        }
+        Rule::CommanderRankMonth(condition) => {
+            edhrec_sql(EdhrecStat::Rank, Period::Month, condition, params)
+        }
+        Rule::CommanderRankYear(condition) => {
+            edhrec_sql(EdhrecStat::Rank, Period::Year, condition, params)
+        }
+        Rule::NumDecksWeek(condition) => {
+            edhrec_sql(EdhrecStat::NumDecks, Period::Week, condition, params)
+        }
+        Rule::NumDecksMonth(condition) => {
+            edhrec_sql(EdhrecStat::NumDecks, Period::Month, condition, params)
+        }
+        Rule::NumDecksYear(condition) => {
+            edhrec_sql(EdhrecStat::NumDecks, Period::Year, condition, params)
+        }
     }
 }
 
@@ -360,4 +420,52 @@ fn number_sql(column: &str, condition: &NumberCondition, params: &mut Vec<Value>
     };
     params.push(Value::Double(*value));
     format!("{column} {operator} ?")
+}
+
+fn tag_sql(condition: &TagCondition, params: &mut Vec<Value>) -> String {
+    let (negation, tag) = match condition {
+        TagCondition::Has(tag) => ("", tag),
+        TagCondition::HasNot(tag) => ("NOT ", tag),
+    };
+    params.push(Value::Text(tag.tag_id.clone()));
+    let tag_match = if tag.include_children {
+        "t.tag_id IN (SELECT a.tag_id FROM catalog.tag_ancestors AS a WHERE a.ancestor_id = ?)"
+    } else {
+        "t.tag_id = ?"
+    };
+    format!(
+        "{negation}EXISTS (SELECT 1 FROM catalog.card_tag_flat AS t WHERE t.oracle_id = c.oracle_id AND {tag_match})"
+    )
+}
+
+/// A commander ranks alone and in partner pairs. Some rank only in pairs, so
+/// the card takes its best rank and the sum of decks over all its entries.
+#[derive(Debug, Clone, Copy)]
+pub enum EdhrecStat {
+    Rank,
+    NumDecks,
+    TrendZscore,
+}
+
+/// SQL for the stat, with one placeholder for the period.
+#[must_use]
+pub fn edhrec_stat_sql(stat: EdhrecStat) -> String {
+    let aggregate = match stat {
+        EdhrecStat::Rank => "min(r.rank)",
+        EdhrecStat::NumDecks => "sum(r.num_decks)",
+        EdhrecStat::TrendZscore => "arg_min(r.trend_zscore, r.rank)",
+    };
+    format!(
+        "(SELECT {aggregate} FROM catalog.edhrec_commander_ranks AS r WHERE r.oracle_id = c.oracle_id AND r.period = ?)"
+    )
+}
+
+fn edhrec_sql(
+    stat: EdhrecStat,
+    period: Period,
+    condition: &NumberCondition,
+    params: &mut Vec<Value>,
+) -> String {
+    params.push(Value::Text(period.code().to_owned()));
+    number_sql(&edhrec_stat_sql(stat), condition, params)
 }

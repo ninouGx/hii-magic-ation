@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::OnceLock;
 
 use hma_core::db::{CATALOG_NEW_FILE, Db};
@@ -12,11 +13,31 @@ fn db() -> &'static Db {
     static DB: OnceLock<Db> = OnceLock::new();
     DB.get_or_init(|| {
         let dir = tempfile::tempdir().unwrap().keep();
-        catalog::build(
-            &RawLayout::new(INGEST_FIXTURES),
-            &dir.join(CATALOG_NEW_FILE),
+        let raw = RawLayout::new(dir.join("raw"));
+        std::fs::create_dir_all(dir.join("raw")).unwrap();
+        std::os::unix::fs::symlink(
+            Path::new(INGEST_FIXTURES).join("scryfall"),
+            raw.scryfall_dir(),
         )
         .unwrap();
+        for (window, pages) in [
+            ("week", &["week.json", "week-pastweek-1.json"][..]),
+            ("month", &["month.json"]),
+            ("year", &["year.json"]),
+        ] {
+            let window_dir = raw.edhrec_commanders_dir().join(window);
+            std::fs::create_dir_all(&window_dir).unwrap();
+            for (number, page) in pages.iter().enumerate() {
+                std::fs::copy(
+                    Path::new(INGEST_FIXTURES)
+                        .join("edhrec/commanders")
+                        .join(page),
+                    window_dir.join(format!("{number:03}.json")),
+                )
+                .unwrap();
+            }
+        }
+        catalog::build(&raw, &dir.join(CATALOG_NEW_FILE)).unwrap();
         Db::open(&dir).unwrap()
     })
 }
@@ -385,4 +406,91 @@ fn valid_regexes_pass_the_check() {
     let filter = group(and(json!([rule("oracle_text", "regex", json!("^{T}:"))])));
 
     assert!(check_regexes(&conn, &filter).is_ok());
+}
+
+fn tag_id(slug: &str) -> String {
+    db().connection()
+        .unwrap()
+        .query_row(
+            "SELECT tag_id FROM catalog.tags WHERE slug = ? AND kind = 'oracle'",
+            [slug],
+            |row| row.get(0),
+        )
+        .unwrap()
+}
+
+#[test]
+fn has_tag_matches_direct_taggings_only() {
+    let burn = tag_id("burn");
+
+    assert!(names_where("tag", "has", json!({ "tag_id": burn })).is_empty());
+}
+
+#[test]
+fn has_tag_with_children_follows_the_hierarchy() {
+    let burn = tag_id("burn");
+    let burn_player = tag_id("burn-player");
+
+    let with_children = names_where(
+        "tag",
+        "has",
+        json!({ "tag_id": burn, "include_children": true }),
+    );
+
+    let direct_child = names_where("tag", "has", json!({ "tag_id": burn_player }));
+
+    assert!(!direct_child.is_empty());
+    assert!(direct_child.iter().all(|name| with_children.contains(name)));
+}
+
+#[test]
+fn has_not_tag_keeps_every_other_card() {
+    let ramp = tag_id("ramp");
+
+    let tagged = names_where("tag", "has", json!({ "tag_id": ramp }));
+    let untagged = names_where("tag", "has_not", json!({ "tag_id": ramp }));
+
+    assert!(!tagged.is_empty());
+    assert_eq!(tagged.len() + untagged.len(), 20);
+}
+
+#[test]
+fn art_tags_reach_the_card_through_its_prints() {
+    let conn = db().connection().unwrap();
+    let art_tag: String = conn
+        .query_row(
+            "SELECT tag_id FROM catalog.tags WHERE kind = 'art' AND tag_id IN (SELECT tag_id FROM catalog.card_tag_flat) LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+
+    assert!(!names_where("tag", "has", json!({ "tag_id": art_tag })).is_empty());
+}
+
+#[test]
+fn commander_rank_uses_the_period_and_the_best_entry() {
+    assert_eq!(
+        names_where("commander_rank_week", "<=", json!(2)),
+        ["Jace, Multiverse Architect", "Y'shtola, Night's Blessed"]
+    );
+    assert_eq!(
+        names_where("commander_rank_month", "between", json!([17, 25])),
+        [
+            "Atraxa, Praetors' Voice",
+            "Frodo, Adventurous Hobbit",
+            "Sam, Loyal Attendant"
+        ]
+    );
+    assert!(names_where("commander_rank_year", ">", json!(25)).is_empty());
+}
+
+#[test]
+fn num_decks_compares_per_period() {
+    assert_eq!(
+        names_where("num_decks_week", ">=", json!(2019)),
+        ["Jace, Multiverse Architect", "Y'shtola, Night's Blessed"]
+    );
+    assert_eq!(names_where("num_decks_month", "=", json!(943)).len(), 2);
+    assert_eq!(names_where("num_decks_year", ">", json!(3000)).len(), 1);
 }
