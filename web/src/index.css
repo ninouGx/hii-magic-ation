@@ -1,0 +1,24 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --space: 1rem;
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161616;
+    --fg: #e8e8e8;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+main {
+  padding: var(--space);
+}
