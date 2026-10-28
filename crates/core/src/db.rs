@@ -71,7 +71,8 @@ impl Db {
     }
 }
 
-fn sql_string_literal(value: &str) -> String {
+#[must_use]
+pub fn sql_string_literal(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 

@@ -12,11 +12,17 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 ## Data model
 
 5. **Tag weight is not a filter or sort criterion.** 99.7 % of oracle taggings and 97 % of art taggings are `median`. Keep the column, drop it from F3 and F4.
-6. **Multi-face text is materialized at ingest.** 3327 of 39099 oracle cards have a null top-level `oracle_text`. Store `search_name`, `search_text` and `search_flavor`, concatenated over all faces, so filters never parse JSON at query time.
+6. **Multi-face text is materialized at ingest.** 3327 of 39099 oracle cards have a null top-level `oracle_text`. `cards.oracle_text` joins the text of every face, `cards.name` already holds `Front // Back`, and `front_name` keeps the first face for the Moxfield export. Filters never parse JSON at query time.
 7. **Power, toughness and loyalty keep two columns.** 547 values are not numeric (`*`, `1+*`, `?`). Store the display string and a nullable number from `TRY_CAST`.
 8. **Tag hierarchy is flattened at sync.** A `tag_ancestors` closure table makes "include child tags" a join. A `card_tag_flat (oracle_id, tag_id)` table resolves art tags from illustration to card. Both are rebuilt with the catalog.
 9. **Scryfall and user tags live in separate files.** `catalog.tags` and `catalog.card_tags` hold Scryfall data. `user.tags` and `user.card_tags` hold custom and AI tags. A view unions them for filters. A sync never writes to `user.duckdb`.
 10. **`prints` stores `image_small`**, used by the grid (F5).
+
+17. **Non-game objects stay out of `cards`.** `oracle_cards` holds about 4200 art series, tokens, emblems, planes, schemes and vanguards. Some share a name with a real card (Tarmogoyf token), which would break name mapping. The build drops these layouts.
+18. **Commander eligibility matches Scryfall exactly.** Rule: commander-legal, not a meld result, and one of legendary creature, Background, legendary Vehicle or Spacecraft with power, "can be your commander", or a Grist-style "isn't on the battlefield" creature. Checked on 2026-10-28 against `is:commander legal:commander`, 3497 oracle_ids on both sides, 0 difference. Re-run the check when a set adds a new commander type.
+19. **Prints are English only, as the spec says.** Cost measured: 17841 art taggings (2593 illustrations, 2.4 %) point to non-English prints only and are lost. 8 cards have no English print and no default print.
+20. **Default print needs a numeric collector number.** Without it, The List reprints (`plst`, `CLB-187`) won the "recent classic" rule.
+21. **The catalog build takes 8 s on the full data** (35k cards, 110k prints, 740k taggings), measured with DuckDB 2.0.0.
 
 ## Sync and concurrency
 
