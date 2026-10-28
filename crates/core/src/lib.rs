@@ -7,4 +7,5 @@ pub mod card;
 pub mod db;
 pub mod filter;
 pub mod search;
+pub mod selection;
 pub use duckdb;

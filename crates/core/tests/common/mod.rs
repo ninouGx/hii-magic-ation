@@ -57,3 +57,26 @@ pub fn rule(field: &str, operator: &str, value: Value) -> Value {
     rule["value"] = value;
     rule
 }
+
+/// A database of its own on the fixture catalog, for tests that write user data.
+pub fn fresh_db() -> (tempfile::TempDir, Db) {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(
+        db().data_dir().join(hma_core::db::CATALOG_DB_FILE),
+        dir.path().join(hma_core::db::CATALOG_DB_FILE),
+    )
+    .unwrap();
+    let db = Db::open(dir.path()).unwrap();
+    (dir, db)
+}
+
+pub fn oracle_id(db: &Db, name: &str) -> String {
+    db.connection()
+        .unwrap()
+        .query_row(
+            "SELECT oracle_id FROM catalog.cards WHERE name = ?",
+            [name],
+            |row| row.get(0),
+        )
+        .unwrap()
+}
