@@ -1,0 +1,29 @@
+[package]
+name = "hii-magic-ation"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+axum = "0.8.9"
+clap = { version = "4.6.7", features = ["derive"] }
+dirs = "7.0.0"
+figment = { version = "0.10.19", features = ["toml", "env"] }
+hma-core = { version = "0.1.0", path = "../core" }
+mime_guess = "2.0.5"
+rust-embed = "8.13.0"
+serde = { version = "1.0.229", features = ["derive"] }
+tokio = { version = "1.54.1", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+figment = { version = "0.10.19", features = ["test"] }
+http-body-util = "0.1.5"
+serde_json = "1.0.154"
+tempfile = "3.27.0"
+tower = { version = "0.5.3", features = ["util"] }
