@@ -1,4 +1,4 @@
-use hma_core::db::Db;
+use hma_core::db::{CATALOG_NEW_FILE, Db, DbError, wal_path};
 
 const ORACLE_TAGS_SAMPLE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -86,4 +86,59 @@ fn reads_scryfall_jsonl_gz_with_nested_taggings() {
         .unwrap();
 
     assert_eq!((tags, taggings), (3, 9));
+}
+
+fn write_catalog(path: &std::path::Path, marker: &str) {
+    let conn = hma_core::duckdb::Connection::open(path).unwrap();
+    conn.execute_batch(&format!("CREATE TABLE cards AS SELECT '{marker}' AS name"))
+        .unwrap();
+    conn.close().unwrap();
+}
+
+fn catalog_marker(db: &Db) -> String {
+    db.connection()
+        .unwrap()
+        .query_row("SELECT name FROM catalog.cards", [], |row| row.get(0))
+        .unwrap()
+}
+
+#[test]
+fn pending_catalog_is_promoted_at_open() {
+    let dir = tempfile::tempdir().unwrap();
+    write_catalog(&dir.path().join(CATALOG_NEW_FILE), "pending");
+
+    let db = Db::open(dir.path()).unwrap();
+
+    assert_eq!(catalog_marker(&db), "pending");
+    assert!(!dir.path().join(CATALOG_NEW_FILE).exists());
+}
+
+#[test]
+fn swap_replaces_the_attached_catalog() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Db::open(dir.path()).unwrap();
+    assert!(!db.catalog_ready());
+    write_catalog(&dir.path().join(CATALOG_NEW_FILE), "first");
+    assert!(db.swap_catalog().unwrap());
+    write_catalog(&dir.path().join(CATALOG_NEW_FILE), "second");
+
+    let swapped = db.swap_catalog().unwrap();
+
+    assert!(swapped);
+    assert!(db.catalog_ready());
+    assert_eq!(catalog_marker(&db), "second");
+    assert!(!db.swap_catalog().unwrap(), "nothing pending any more");
+}
+
+#[test]
+fn catalog_still_open_by_its_writer_is_not_promoted() {
+    let dir = tempfile::tempdir().unwrap();
+    let pending = dir.path().join(CATALOG_NEW_FILE);
+    write_catalog(&pending, "pending");
+    std::fs::write(wal_path(&pending), b"").unwrap();
+
+    let result = Db::open(dir.path());
+
+    assert!(matches!(result, Err(DbError::UnclosedCatalog(_))));
+    assert!(pending.exists());
 }

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use hma_core::db::sql_string_literal;
+use hma_core::db::{sql_string_literal, wal_path};
 use hma_core::duckdb::{self, Connection};
 use serde::Serialize;
 
@@ -174,13 +174,6 @@ pub fn remove_database_files(path: &Path) -> std::io::Result<()> {
         }
     }
     Ok(())
-}
-
-#[must_use]
-pub fn wal_path(path: &Path) -> PathBuf {
-    let mut wal = path.as_os_str().to_owned();
-    wal.push(".wal");
-    PathBuf::from(wal)
 }
 
 fn bind_raw_paths(sql: &str, raw: &RawLayout, edhrec_pages: &[PathBuf]) -> String {
