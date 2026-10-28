@@ -1,4 +1,5 @@
 mod app;
+mod catalog_api;
 mod config;
 mod sync_job;
 
@@ -81,7 +82,7 @@ async fn serve(config: Config) -> anyhow::Result<()> {
         .await
         .with_context(|| format!("cannot bind {}", config.bind))?;
     tracing::info!(addr = %config.bind, data_dir = %config.data_dir.display(), "listening");
-    axum::serve(listener, app::router(db))
+    axum::serve(listener, app::router(app::AppState::new(db)))
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.ok();
         })
