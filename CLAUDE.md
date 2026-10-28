@@ -20,7 +20,8 @@ Local web app to explore every Commander-legal Magic card, build themed card sel
 
 ## Rules
 
-- Work milestone by milestone (M0 to M7 in the spec). Do not start a milestone before the previous one passes its acceptance criteria.
+- Work milestone by milestone (M0 to M7 in the spec). Do not start a milestone before the previous one passes its acceptance criteria. Track milestone progress in `docs/progress.md`.
+- Commit one feature step at a time, never one milestone at a time. Conventional commits with a scope (`feat(catalog): ...`, `feat(edhrec): ...`). Never name a milestone in a commit. Each commit passes `scripts/check.sh`.
 - Write each acceptance criterion as a test first. Test names state the behavior.
 - Code is self-explanatory. A comment only states a non-obvious why.
 - Add dependencies with `cargo add` or `npm install`, never versions from memory.
