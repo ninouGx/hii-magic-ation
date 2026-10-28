@@ -5,4 +5,5 @@
 
 pub mod db;
 pub mod filter;
+pub mod search;
 pub use duckdb;
