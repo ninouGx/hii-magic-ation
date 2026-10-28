@@ -142,3 +142,47 @@ fn catalog_still_open_by_its_writer_is_not_promoted() {
     assert!(matches!(result, Err(DbError::UnclosedCatalog(_))));
     assert!(pending.exists());
 }
+
+#[test]
+fn user_schema_is_created_once_and_keeps_its_rows() {
+    let dir = tempfile::tempdir().unwrap();
+    {
+        let db = Db::open(dir.path()).unwrap();
+        db.connection()
+            .unwrap()
+            .execute_batch("INSERT INTO selections (name) VALUES ('Dragons')")
+            .unwrap();
+    }
+
+    let db = Db::open(dir.path()).unwrap();
+    let conn = db.connection().unwrap();
+    let (names, versions): (i64, i64) = conn
+        .query_row(
+            "SELECT (SELECT count(*) FROM selections), (SELECT count(*) FROM user_schema_version)",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+
+    assert_eq!((names, versions), (1, 1));
+}
+
+#[test]
+fn selection_card_quantity_updates_in_place() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Db::open(dir.path()).unwrap();
+    let conn = db.connection().unwrap();
+
+    conn.execute_batch(
+        "INSERT INTO selection_cards (selection_id, oracle_id) VALUES ('s', 'a');
+         INSERT INTO selection_cards (selection_id, oracle_id) VALUES ('s', 'a')
+             ON CONFLICT DO UPDATE SET quantity = quantity + 1;
+         UPDATE selection_cards SET quantity = quantity + 1 WHERE selection_id = 's';",
+    )
+    .unwrap();
+    let quantity: i32 = conn
+        .query_row("SELECT quantity FROM selection_cards", [], |row| row.get(0))
+        .unwrap();
+
+    assert_eq!(quantity, 3);
+}

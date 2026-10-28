@@ -9,6 +9,9 @@ pub const CATALOG_SCHEMA: &str = "catalog";
 /// A sync writes the next catalog here, then the catalog swap renames it.
 pub const CATALOG_NEW_FILE: &str = "catalog.duckdb.new";
 
+/// Applied in order, once each. Never edit a released migration, add the next one.
+const USER_MIGRATIONS: &[(i32, &str)] = &[(1, include_str!("../sql/user/001_selections.sql"))];
+
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
     #[error(transparent)]
@@ -47,6 +50,7 @@ impl Db {
             Connection::open(&catalog_path)?;
         }
         let conn = Connection::open(data_dir.join(USER_DB_FILE))?;
+        migrate_user(&conn)?;
         attach_catalog(&conn, &catalog_path)?;
         Ok(Self {
             root: Arc::new(Mutex::new(conn)),
@@ -107,6 +111,26 @@ impl Db {
             databases,
         })
     }
+}
+
+fn migrate_user(conn: &Connection) -> Result<(), DbError> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS user_schema_version (version INTEGER NOT NULL)",
+    )?;
+    let current: i32 = conn.query_row(
+        "SELECT coalesce(max(version), 0) FROM user_schema_version",
+        [],
+        |row| row.get(0),
+    )?;
+    for (version, sql) in USER_MIGRATIONS
+        .iter()
+        .filter(|(version, _)| *version > current)
+    {
+        conn.execute_batch(&format!(
+            "BEGIN; {sql}; INSERT INTO user_schema_version VALUES ({version}); COMMIT;"
+        ))?;
+    }
+    Ok(())
 }
 
 fn attach_catalog(conn: &Connection, path: &Path) -> Result<(), DbError> {
