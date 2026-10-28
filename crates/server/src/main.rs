@@ -104,19 +104,19 @@ async fn sync(config: &Config, only: Option<Source>, rebuild: bool) -> anyhow::R
     if report.catalog.is_some() {
         match notify_server(config).await {
             Ok(()) => println!("The running server now uses the new catalog."),
-            Err(e) => {
-                tracing::debug!(error = %e, "server not reachable");
-                println!(
-                    "No server reachable at {}, the new catalog loads at next start.",
-                    config.bind
-                );
-            }
+            Err(e) if e.is_connect() => println!(
+                "No server reachable at {}, the new catalog loads at next start.",
+                config.bind
+            ),
+            Err(e) => println!(
+                "The server refused the reload ({e}), the new catalog loads at next start."
+            ),
         }
     }
     Ok(ExitCode::SUCCESS)
 }
 
-async fn notify_server(config: &Config) -> anyhow::Result<()> {
+async fn notify_server(config: &Config) -> reqwest::Result<()> {
     reqwest::Client::new()
         .post(format!("http://{}/api/catalog/reload", config.bind))
         .send()
