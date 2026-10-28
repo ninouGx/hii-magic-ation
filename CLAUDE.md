@@ -10,19 +10,26 @@ Local web app to explore every Commander-legal Magic card, build themed card sel
 - `crates/core` (`hma-core`): domain, DuckDB access, filter AST and SQL compiler.
 - `crates/server` (`hii-magic-ation` binary): axum API, CLI, embedded front.
 - `web/`: React, TypeScript, Vite. `npm run build` writes `web/dist`, which the binary embeds.
-- Crates `ingest` (M1) and `ai` (M5) are created when their milestone starts.
+- `crates/ingest` (`hma-ingest`): Scryfall and EDHREC downloads, catalog build. Crate `ai` is created in M5.
+- User schema: `crates/core/sql/user/NNN_*.sql`, applied once each by `Db::open`. Never edit a released migration, add the next one.
 
 ## Commands
 
 - `scripts/check.sh`: local CI (front lint, Vitest and build, then fmt, clippy, tests). Run it before each commit.
 - `cargo run -p hii-magic-ation`: serve on 127.0.0.1:7878. Front dev server: `npm run dev` in `web/`, it proxies `/api`.
 - Config: `$XDG_CONFIG_HOME/hii-magic-ation/config.toml`, overridden by `HMA_*` variables. Data: `$XDG_DATA_HOME/hii-magic-ation`.
+- Commit chain, so a failed check never lets a commit through: `./scripts/check.sh > target/check.log 2>&1 && zsh -ic cv > target/cv.log 2>&1 && ! grep -qE '^(error|warning)' target/cv.log && git commit ...`. Run `zsh -ic cf` first after edits made with sed or scripts.
+- Manual test in a browser: Nils often runs his own server on 7878, and it holds the lock on `user.duckdb`. Copy the catalog to `target/verify/data/` and run `HMA_DATA_DIR=$PWD/target/verify/data HMA_BIND=127.0.0.1:7879 cargo run -p hii-magic-ation -- serve`. Stop it by PID afterwards.
 
 ## Rules
 
 - Work milestone by milestone (M0 to M7 in the spec). Do not start a milestone before the previous one passes its acceptance criteria. Track milestone progress in `docs/progress.md`.
 - Commit one feature step at a time, never one milestone at a time. Conventional commits with a scope (`feat(catalog): ...`, `feat(edhrec): ...`). Never name a milestone in a commit. Each commit passes `scripts/check.sh`.
-- Write each acceptance criterion as a test first. Test names state the behavior.
+- Write each acceptance criterion as a test first. Test names state the behavior. Check that a new test fails without its fix.
+- Core tests share one fixture catalog (`tests/common::db()`). A test that writes user data uses `common::fresh_db()`.
+- After each feature, get a Gemini review of the diff (`gemi`, see the gemini skill). Verify every finding in the code before acting, and report which ones were dismissed and why.
+- Test every UI path in a real browser before calling it done: clicks, keys, closing, URL state.
+- Spec changes agreed with Nils go into the spec Claude Doc and into `docs/decisions.md`, with the date.
 - Code is self-explanatory. A comment only states a non-obvious why.
 - Add dependencies with `cargo add` or `npm install`, never versions from memory.
 - The filter compiler emits parameterized SQL only. Never concatenate a user value into SQL.

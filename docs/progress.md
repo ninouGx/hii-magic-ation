@@ -30,7 +30,9 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
 - [x] F5 grid: progressive image quality (`thumb`, then `grid` or `display` by `srcset`), double-faced badge that flips the card
 - [x] F5 detail window: centered over the grid, arrows move through the result, Escape or a click outside closes it, card in the URL
 - [ ] F5 category view, print choice in the detail window
-- [ ] F9, F10, first deck exported to Moxfield
+- [ ] F9 selections: core, API, Selections screen, add from the grid, the detail window and in bulk
+- [ ] F3 deck mode: with a selection commander, an identity rule is added and can be turned off
+- [ ] F10 Moxfield export, first deck imported
 
 ## M4, enrichment
 

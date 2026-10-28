@@ -36,6 +36,9 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 30. **The grid uses the Scryfall WebP sizes.** `small` (146×204) looks pixelated once a column grows and on a high-density screen. Measured on 2026-10-29: `thumb` 6.5 KB, `grid` 30 KB (488×680), `display` 40 KB (672×936), against 62 KB for the `normal` JPG. All sizes share one URL except the size folder, and a back face swaps `/front/` for `/back/`.
 31. **A double-faced card always shows its front in the grid.** A badge flips it. Showing the face that matched the filter would need a per-face evaluation on the server, and Nils prefers to flip by hand.
 
+32. **A selection card has a quantity.** The spec lists no quantity column. Without it, basic lands cannot reach their count and the singleton alert has nothing to detect. Adding a card again adds a copy, and the alert flags it. Basic lands and cards that allow any number of copies (Relentless Rats, Seven Dwarves) escape the alert.
+33. **User data has its own migrations.** `user.duckdb` cannot be rebuilt, so each schema change is a numbered SQL file applied once by `Db::open`, tracked in `user_schema_version`.
+
 ## Sync and concurrency
 
 11. **A sync builds a new catalog file and swaps it.** DuckDB allows one writing process per file. The sync writes `catalog.duckdb.new`, validates row counts, then the server detaches the old catalog, renames the file and attaches it again. This replaces the staging-tables design. The CLI `sync` command never opens `user.duckdb`, so it runs while the server is up, and asks the server to reload when it is reachable.
