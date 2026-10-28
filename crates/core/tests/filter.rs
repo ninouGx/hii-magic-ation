@@ -522,3 +522,11 @@ fn print_and_ruling_regexes_are_checked() {
         ));
     }
 }
+
+#[test]
+fn between_accepts_bounds_in_any_order() {
+    assert_eq!(
+        names_where("cmc", "between", json!([6, 5])),
+        names_where("cmc", "between", json!([5, 6]))
+    );
+}

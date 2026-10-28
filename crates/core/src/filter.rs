@@ -509,9 +509,9 @@ fn number_sql(column: &str, condition: &NumberCondition, params: &mut Vec<Value>
         NumberCondition::Le(value) => ("<=", value),
         NumberCondition::Gt(value) => (">", value),
         NumberCondition::Ge(value) => (">=", value),
-        NumberCondition::Between(low, high) => {
-            params.push(Value::Double(*low));
-            params.push(Value::Double(*high));
+        NumberCondition::Between(first, second) => {
+            params.push(Value::Double(first.min(*second)));
+            params.push(Value::Double(first.max(*second)));
             return format!("{column} BETWEEN ? AND ?");
         }
     };
