@@ -24,3 +24,15 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
   - Invalid regex: HTTP 400 with the RE2 message before the search runs, shown at once
   - Infinite scroll loads all 238 cards of the reference query, 100 per page
   - Left for later milestones: deck mode (M3, needs selections), custom and AI tags (M4, M5), similarity, synergy and graph rules (M5 to M7)
+
+## M3, themed deck
+
+- [ ] F5 grid: progressive image quality (`thumb`, then `grid` or `display` by `srcset`), double-faced badge that flips the card
+- [ ] F5 detail window: centered over the grid, arrows move through the result, Escape or a click outside closes it, card in the URL
+- [ ] F5 category view, print choice in the detail window
+- [ ] F9, F10, first deck exported to Moxfield
+
+## M4, enrichment
+
+- [ ] F5 table view: thumbnail on the left, one column per field, a header click sets the main sort
+- [ ] F6, F7, Explorer screen finished

@@ -32,6 +32,10 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 27. **The server checks regexes, not the front.** JavaScript `RegExp` accepts lookahead, RE2 does not. Before a search runs, the server tests each pattern with DuckDB and returns HTTP 400 with the RE2 message. The search query itself does not run.
 28. **Counts stay under 100 ms on the full catalog.** The reference query counts in 45 ms after warm-up. A five-way OR over a text regex, flavor text, rulings, deck count and artist counts in 85 ms. No index or precomputation.
 
+29. **The card detail is a centered window, not a right panel.** The spec placed a shared detail panel on the right. Nils chose the EDHREC model on 2026-10-29: a window over the current screen, arrows to move through the result, Escape or a click outside to close. The window stays the same on every screen.
+30. **The grid uses the Scryfall WebP sizes.** `small` (146×204) looks pixelated once a column grows and on a high-density screen. Measured on 2026-10-29: `thumb` 6.5 KB, `grid` 30 KB (488×680), `display` 40 KB (672×936), against 62 KB for the `normal` JPG. All sizes share one URL except the size folder, and a back face swaps `/front/` for `/back/`.
+31. **A double-faced card always shows its front in the grid.** A badge flips it. Showing the face that matched the filter would need a per-face evaluation on the server, and Nils prefers to flip by hand.
+
 ## Sync and concurrency
 
 11. **A sync builds a new catalog file and swaps it.** DuckDB allows one writing process per file. The sync writes `catalog.duckdb.new`, validates row counts, then the server detaches the old catalog, renames the file and attaches it again. This replaces the staging-tables design. The CLI `sync` command never opens `user.duckdb`, so it runs while the server is up, and asks the server to reload when it is reachable.
