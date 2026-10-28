@@ -74,7 +74,7 @@ pub async fn formats(State(state): State<AppState>) -> Result<Json<Vec<String>>,
 
 /// Runs a catalog query off the async runtime. Before the first sync there is
 /// no catalog to query, which the client can fix, so it is not a server error.
-async fn on_catalog<T, F>(state: AppState, query: F) -> Result<Json<T>, ApiError>
+pub(crate) async fn on_catalog<T, F>(state: AppState, query: F) -> Result<Json<T>, ApiError>
 where
     T: Send + 'static,
     F: FnOnce(&Connection) -> Result<T, ApiError> + Send + 'static,

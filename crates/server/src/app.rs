@@ -10,7 +10,7 @@ use rust_embed::Embed;
 use serde::Serialize;
 
 use crate::catalog_api::{self, SyncStatus};
-use crate::search_api;
+use crate::{search_api, selection_api};
 
 #[derive(Embed)]
 #[folder = "../../web/dist"]
@@ -45,6 +45,23 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/cards/search", post(search_api::search))
         .route("/cards/{oracle_id}", get(search_api::card))
+        .route(
+            "/selections",
+            get(selection_api::list).post(selection_api::create),
+        )
+        .route(
+            "/selections/{id}",
+            get(selection_api::get)
+                .put(selection_api::update)
+                .delete(selection_api::delete),
+        )
+        .route("/selections/{id}/cards", post(selection_api::add_filtered))
+        .route(
+            "/selections/{id}/cards/{oracle_id}",
+            post(selection_api::add_card)
+                .put(selection_api::set_card)
+                .delete(selection_api::remove_card),
+        )
         .route("/tags", get(search_api::tags))
         .route("/keywords", get(search_api::keywords))
         .route("/formats", get(search_api::formats))

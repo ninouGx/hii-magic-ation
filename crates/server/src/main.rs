@@ -2,6 +2,7 @@ mod app;
 mod catalog_api;
 mod config;
 mod search_api;
+mod selection_api;
 mod sync_job;
 
 use std::path::PathBuf;
