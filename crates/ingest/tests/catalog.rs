@@ -240,6 +240,28 @@ fn changed_bulk_format_fails_the_build() {
     );
 }
 
+#[test]
+fn missing_type_line_fails_the_build() {
+    let dir = tempfile::tempdir().unwrap();
+    let raw = copy_fixtures_to(dir.path());
+    Connection::open_in_memory()
+        .unwrap()
+        .execute_batch(&format!(
+            "COPY (SELECT 'x' AS oracle_id, 'Nameless' AS name, 'normal' AS layout, 1.0 AS cmc,
+                    MAP {{'commander': 'legal'}} AS legalities)
+             TO {} (FORMAT json, COMPRESSION gzip)",
+            sql_string_literal(&raw.scryfall_file("oracle_cards").to_string_lossy())
+        ))
+        .unwrap();
+
+    let err = catalog::build(&raw, &dir.path().join("c.duckdb")).unwrap_err();
+
+    assert!(
+        err.to_string().contains("type_line or cmc missing"),
+        "{err}"
+    );
+}
+
 fn copy_fixtures_to(dir: &Path) -> RawLayout {
     let raw = RawLayout::new(dir.join("raw"));
     std::fs::create_dir_all(raw.scryfall_dir()).unwrap();
