@@ -213,3 +213,149 @@ button {
   gap: calc(var(--space) / 2);
   align-items: center;
 }
+
+.grid li {
+  cursor: pointer;
+}
+
+.grid li:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.card-detail {
+  width: min(64rem, calc(100vw - 2 * var(--space)));
+  max-height: calc(100vh - 2 * var(--space));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.card-detail::backdrop {
+  background: rgb(0 0 0 / 70%);
+}
+
+.card-detail-body {
+  padding: var(--space);
+}
+
+.card-detail-body > header {
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(var(--space) / 2);
+}
+
+.card-detail-content {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  gap: calc(var(--space) * 1.5);
+}
+
+@media (max-width: 48rem) {
+  .card-detail-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-detail-image {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) / 2);
+  margin: 0;
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.card-detail-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 4.75% / 3.5%;
+}
+
+.card-detail-image figcaption,
+.rulings time,
+.legalities span {
+  color: var(--muted);
+}
+
+.card-detail-text h2 {
+  margin-top: 0;
+}
+
+.card-detail-text .oracle {
+  white-space: pre-line;
+}
+
+.card-detail-text .type-line {
+  font-weight: 600;
+}
+
+.mana {
+  font-family: ui-monospace, monospace;
+  font-weight: 400;
+  margin-left: calc(var(--space) / 2);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: calc(var(--space) / 4) var(--space);
+}
+
+.facts > div {
+  display: contents;
+}
+
+.facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.legalities,
+.tags,
+.prints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) / 2);
+  padding: 0;
+  list-style: none;
+}
+
+.legalities li[data-status='legal'] span {
+  color: inherit;
+}
+
+.legalities li[data-status='banned'] span {
+  color: var(--danger);
+}
+
+.tags li {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.prints button {
+  padding: 0;
+  border-width: 2px;
+  border-color: transparent;
+}
+
+.prints button[aria-pressed='true'] {
+  border-color: var(--fg);
+}
+
+.prints img {
+  display: block;
+  width: 4.5rem;
+  height: auto;
+  border-radius: 4.75% / 3.5%;
+}
+
+.rulings {
+  padding-left: var(--space);
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { RuleGroupType } from 'react-querybuilder'
 import { DEFAULT_FILTER, findTag, tagSearchText, toApiFilter } from './fields'
 import { DEFAULT_SORT, decodeSearch, encodeSearch } from './urlState'
+import { neighbor } from './neighbor'
 
 const group = (rules: RuleGroupType['rules'], not = false): RuleGroupType => ({ combinator: 'and', not, rules })
 
@@ -112,8 +113,20 @@ describe('URL state', () => {
   })
 
   it('falls back to defaults on a missing or broken URL', () => {
-    expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT })
-    expect(decodeSearch('?filter=%7Bnope&sort=[{"field":1}]')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT })
+    expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: null })
+    expect(decodeSearch('?filter=%7Bnope&sort=[{"field":1}]')).toEqual({
+      filter: DEFAULT_FILTER,
+      sort: DEFAULT_SORT,
+      card: null,
+    })
+  })
+
+  it('keeps the open card and leaves it out once closed', () => {
+    const open = encodeSearch({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: 'abc' })
+    const closed = encodeSearch({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: null })
+
+    expect(decodeSearch(open).card).toBe('abc')
+    expect(closed).not.toContain('card=')
   })
 })
 
@@ -132,5 +145,20 @@ describe('tag lookup', () => {
     expect(findTag(options, 'removal (art)')?.tag_id).toBe('a')
     expect(findTag(options, 'removal')).toBeUndefined()
     expect(findTag(undefined, 'removal (oracle)')).toBeUndefined()
+  })
+})
+
+describe('neighbor', () => {
+  const cards = [{ oracle_id: 'a' }, { oracle_id: 'b' }, { oracle_id: 'c' }]
+
+  it('moves to the previous and next card of the result', () => {
+    expect(neighbor(cards, 'b', 1)).toBe('c')
+    expect(neighbor(cards, 'b', -1)).toBe('a')
+  })
+
+  it('stops at both ends and on a card no longer in the result', () => {
+    expect(neighbor(cards, 'a', -1)).toBeNull()
+    expect(neighbor(cards, 'c', 1)).toBeNull()
+    expect(neighbor(cards, 'z', 1)).toBeNull()
   })
 })

@@ -97,3 +97,46 @@ export const fetchKeywords = (text: string) =>
   request<string[]>(`/api/keywords?${new URLSearchParams({ q: text })}`)
 
 export const fetchFormats = () => request<string[]>('/api/formats')
+
+export type CardFace = {
+  name: string | null
+  mana_cost: string | null
+  type_line: string | null
+  oracle_text: string | null
+  power: string | null
+  toughness: string | null
+  loyalty: string | null
+}
+
+export type CardDetail = CardFace & {
+  oracle_id: string
+  name: string
+  cmc: number | null
+  layout: string
+  double_faced: boolean
+  colors: string[]
+  color_identity: string[]
+  keywords: string[]
+  is_commander_eligible: boolean
+  game_changer: boolean
+  edhrec_rank: number | null
+  default_print_id: string | null
+  faces: CardFace[]
+  legalities: { format: string; status: string }[]
+  commander_ranks: { period: string; rank: number; num_decks: number | null; trend_zscore: number | null }[]
+  tags: { tag_id: string; slug: string; label: string; kind: string; source: string }[]
+  rulings: { published_at: string; source: string; comment: string }[]
+  prints: {
+    print_id: string
+    set_code: string
+    collector_number: string
+    released_at: string | null
+    rarity: string | null
+    artist: string | null
+    image_small: string | null
+    price_eur: number | null
+    price_usd: number | null
+  }[]
+}
+
+export const fetchCard = (oracleId: string) => request<CardDetail>(`/api/cards/${encodeURIComponent(oracleId)}`)

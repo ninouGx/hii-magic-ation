@@ -13,10 +13,11 @@ export default function Explorer() {
   const [initial] = useState(() => decodeSearch(window.location.search))
   const [filter, setFilter] = useState<RuleGroupType>(initial.filter)
   const [sort, setSort] = useState<SortKey[]>(initial.sort)
+  const [card, setCard] = useState<string | null>(initial.card ?? null)
 
   useEffect(() => {
-    window.history.replaceState(null, '', `${window.location.pathname}${encodeSearch({ filter, sort })}`)
-  }, [filter, sort])
+    window.history.replaceState(null, '', `${window.location.pathname}${encodeSearch({ filter, sort, card })}`)
+  }, [filter, sort, card])
 
   const apiFilter = useDebounced(useMemo(() => toApiFilter(filter), [filter]), DEBOUNCE_MS)
 
@@ -32,7 +33,7 @@ export default function Explorer() {
         enableDragAndDrop={false}
       />
       <SortControls sort={sort} onChange={setSort} />
-      <ResultGrid filter={apiFilter} sort={sort} />
+      <ResultGrid filter={apiFilter} sort={sort} openCard={card} onOpenCard={setCard} />
     </>
   )
 }
