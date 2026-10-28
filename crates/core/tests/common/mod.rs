@@ -1,3 +1,8 @@
+#![allow(
+    dead_code,
+    reason = "each test binary uses a different part of this module"
+)]
+
 use std::path::Path;
 use std::sync::OnceLock;
 

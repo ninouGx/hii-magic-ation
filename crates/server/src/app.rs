@@ -44,6 +44,7 @@ pub fn router(state: AppState) -> Router {
             get(catalog_api::sync_status).post(catalog_api::start_sync),
         )
         .route("/cards/search", post(search_api::search))
+        .route("/cards/{oracle_id}", get(search_api::card))
         .route("/tags", get(search_api::tags))
         .route("/keywords", get(search_api::keywords))
         .route("/formats", get(search_api::formats))

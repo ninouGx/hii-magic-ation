@@ -1,6 +1,7 @@
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use hma_core::card::{self, CardDetail};
 use hma_core::duckdb::Connection;
 use hma_core::filter::FilterError;
 use hma_core::search::{self, SearchPage, SearchRequest, TagSuggestion};
@@ -19,6 +20,18 @@ pub async fn search(
             FilterError::InvalidRegex { .. } => ApiError::new(StatusCode::BAD_REQUEST, error),
             FilterError::Db(error) => ApiError::internal(error),
         })
+    })
+    .await
+}
+
+pub async fn card(
+    State(state): State<AppState>,
+    Path(oracle_id): Path<String>,
+) -> Result<Json<CardDetail>, ApiError> {
+    on_catalog(state, move |conn| {
+        card::card_detail(conn, &oracle_id)
+            .map_err(ApiError::internal)?
+            .ok_or_else(|| ApiError::new(StatusCode::NOT_FOUND, "no card with this oracle_id"))
     })
     .await
 }
@@ -195,6 +208,29 @@ mod tests {
         .await;
 
         assert_eq!(status, StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn card_detail_is_found_by_oracle_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = state_with_catalog(dir.path());
+        let (_, page) = send(
+            &state,
+            search(&json!({
+                "filter": { "combinator": "and", "rules": [
+                    { "field": "name", "operator": "contains", "value": "delver" }
+                ]}
+            })),
+        )
+        .await;
+        let oracle_id = page["cards"][0]["oracle_id"].as_str().unwrap();
+
+        let (status, card) = send(&state, get(&format!("/api/cards/{oracle_id}"))).await;
+        let (missing, _) = send(&state, get("/api/cards/nope")).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(card["faces"][1]["name"], "Insectile Aberration");
+        assert_eq!(missing, StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]

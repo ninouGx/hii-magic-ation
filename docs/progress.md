@@ -27,7 +27,7 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
 
 ## M3, themed deck
 
-- [ ] F5 grid: progressive image quality (`thumb`, then `grid` or `display` by `srcset`), double-faced badge that flips the card
+- [x] F5 grid: progressive image quality (`thumb`, then `grid` or `display` by `srcset`), double-faced badge that flips the card
 - [ ] F5 detail window: centered over the grid, arrows move through the result, Escape or a click outside closes it, card in the URL
 - [ ] F5 category view, print choice in the detail window
 - [ ] F9, F10, first deck exported to Moxfield

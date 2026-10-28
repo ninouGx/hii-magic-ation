@@ -3,6 +3,7 @@
     reason = "internal crate, every error type is a documented enum"
 )]
 
+pub mod card;
 pub mod db;
 pub mod filter;
 pub mod search;
