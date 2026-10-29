@@ -137,6 +137,7 @@ fn second_copy_raises_a_singleton_alert() {
         oracle_id: oracle_id(&db, "Shivan Dragon"),
         name: "Shivan Dragon".to_owned(),
         quantity: 2,
+        limit: 1,
     }));
 }
 
@@ -275,4 +276,68 @@ fn unknown_card_is_refused() {
     let result = selection::add_card(&conn, &deck.selection_id, "nope");
 
     assert!(matches!(result, Err(SelectionError::UnknownCard(_))));
+}
+
+#[test]
+fn filter_counts_only_the_new_cards_when_some_are_already_there() {
+    let (_dir, db) = fresh_db();
+    let conn = db.connection().unwrap();
+    let deck = with_commander(&db, "Dragonlord Atarka");
+    add(&db, &deck, "Shivan Dragon");
+    let dragons: Group =
+        serde_json::from_value(and(json!([rule("name", "contains", json!("dragon"))]))).unwrap();
+
+    let added = selection::add_filtered(&conn, &deck.selection_id, &dragons).unwrap();
+
+    assert_eq!(added, 1);
+}
+
+#[test]
+fn commander_removed_by_a_sync_is_flagged_not_an_error() {
+    let (_dir, db) = fresh_db();
+    let conn = db.connection().unwrap();
+    let deck = with_commander(&db, "Dragonlord Atarka");
+    conn.execute(
+        "UPDATE selections SET commander_oracle_id = 'gone' WHERE selection_id = ?",
+        [&deck.selection_id],
+    )
+    .unwrap();
+
+    let deck = selection::get(&conn, &deck.selection_id).unwrap();
+
+    assert_eq!(deck.commander.unwrap().name, None);
+    assert!(deck.alerts.contains(&Alert::MissingCard {
+        oracle_id: "gone".to_owned()
+    }));
+}
+
+#[test]
+fn partner_equal_to_the_commander_is_refused() {
+    let (_dir, db) = fresh_db();
+    let conn = db.connection().unwrap();
+    let deck = selection::create(&conn, "Deck").unwrap();
+
+    let result = selection::update(
+        &conn,
+        &deck.selection_id,
+        &meta(
+            &db,
+            "Deck",
+            Some("Dragonlord Atarka"),
+            Some("Dragonlord Atarka"),
+        ),
+    );
+
+    assert!(matches!(result, Err(SelectionError::PartnerIsCommander)));
+}
+
+#[test]
+fn blank_name_is_refused() {
+    let (_dir, db) = fresh_db();
+    let conn = db.connection().unwrap();
+
+    assert!(matches!(
+        selection::create(&conn, "  "),
+        Err(SelectionError::EmptyName)
+    ));
 }

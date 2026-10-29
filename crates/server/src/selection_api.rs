@@ -17,6 +17,8 @@ impl From<SelectionError> for ApiError {
             SelectionError::UnknownCard(_)
             | SelectionError::ForeignPrint { .. }
             | SelectionError::EmptyQuantity
+            | SelectionError::EmptyName
+            | SelectionError::PartnerIsCommander
             | SelectionError::Filter(FilterError::InvalidRegex { .. }) => StatusCode::BAD_REQUEST,
             SelectionError::Filter(FilterError::Db(_)) | SelectionError::Db(_) => {
                 return ApiError::internal(error);
