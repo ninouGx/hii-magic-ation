@@ -215,7 +215,43 @@ button {
 }
 
 .grid li {
+  position: relative;
   cursor: pointer;
+}
+
+.card-actions {
+  display: flex;
+  gap: calc(var(--space) / 4);
+  align-items: center;
+  margin-right: auto;
+}
+
+.card-actions.compact {
+  position: absolute;
+  bottom: 6%;
+  left: 6%;
+  margin: 0;
+}
+
+.card-actions.compact button,
+.card-actions.compact .in-selection {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 calc(var(--space) / 2);
+  border-radius: 1rem;
+  background: rgb(0 0 0 / 65%);
+  color: #ffffff;
+  border: 1px solid rgb(255 255 255 / 70%);
+}
+
+.card-actions.compact .in-selection {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.card-actions:not(.compact) .in-selection {
+  font-weight: 600;
 }
 
 .grid li:focus-visible {

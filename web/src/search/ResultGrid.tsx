@@ -1,6 +1,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { searchCards } from '../api'
+import type { ActiveSelection } from '../selections/activeSelection'
+import { AddAllButton, CardActions } from '../selections/SelectionControls'
 import CardDetail from './CardDetail'
 import CardTile from './CardTile'
 import { neighbor } from './neighbor'
@@ -14,9 +16,10 @@ type Props = {
   sort: SortKey[]
   openCard: string | null
   onOpenCard: (oracleId: string | null) => void
+  active: ActiveSelection
 }
 
-export default function ResultGrid({ filter, sort, openCard, onOpenCard }: Props) {
+export default function ResultGrid({ filter, sort, openCard, onOpenCard, active }: Props) {
   const results = useInfiniteQuery({
     queryKey: ['search', filter, sort],
     queryFn: ({ pageParam, signal }) => searchCards({ filter, sort, offset: pageParam, limit: PAGE_SIZE }, signal),
@@ -64,6 +67,9 @@ export default function ResultGrid({ filter, sort, openCard, onOpenCard }: Props
             ? 'Searching…'
             : `${total.toLocaleString()} cards${results.isFetching && !isFetchingNextPage ? ' · updating…' : ''}`}
       </p>
+      {total !== undefined && !results.isPlaceholderData && (
+        <AddAllButton key={JSON.stringify([filter, active.selection?.selection_id])} filter={filter} total={total} active={active} />
+      )}
       {results.isError && <p role="alert">{results.error.message}</p>}
       <ul className="grid">
         {cards.map((card) => (
@@ -75,10 +81,11 @@ export default function ResultGrid({ filter, sort, openCard, onOpenCard }: Props
             aria-label={`Open ${card.name}`}
             onClick={() => onOpenCard(card.oracle_id)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') onOpenCard(card.oracle_id)
+              if (event.key === 'Enter' && event.target === event.currentTarget) onOpenCard(card.oracle_id)
             }}
           >
             <CardTile card={card} />
+            <CardActions oracleId={card.oracle_id} name={card.name} active={active} compact />
           </li>
         ))}
       </ul>
@@ -91,6 +98,7 @@ export default function ResultGrid({ filter, sort, openCard, onOpenCard }: Props
           next={neighbor(cards, openCard, 1)}
           onNavigate={onOpenCard}
           onClose={() => onOpenCard(null)}
+          actions={(name) => <CardActions oracleId={openCard} name={name} active={active} />}
         />
       )}
     </section>

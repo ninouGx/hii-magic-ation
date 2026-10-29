@@ -113,11 +113,12 @@ describe('URL state', () => {
   })
 
   it('falls back to defaults on a missing or broken URL', () => {
-    expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: null })
+    expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: null, selection: null })
     expect(decodeSearch('?filter=%7Bnope&sort=[{"field":1}]')).toEqual({
       filter: DEFAULT_FILTER,
       sort: DEFAULT_SORT,
       card: null,
+      selection: null,
     })
   })
 
@@ -127,6 +128,14 @@ describe('URL state', () => {
 
     expect(decodeSearch(open).card).toBe('abc')
     expect(closed).not.toContain('card=')
+  })
+
+  it('keeps the active selection and leaves it out when none is active', () => {
+    const active = encodeSearch({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, selection: 'sel-1' })
+    const none = encodeSearch({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, selection: null })
+
+    expect(decodeSearch(active).selection).toBe('sel-1')
+    expect(none).not.toContain('selection=')
   })
 })
 

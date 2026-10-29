@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { fetchCard, type CardDetail as Card, type CardFace } from '../api'
 import { scryfallImage, type Face } from './images'
 
@@ -11,10 +11,12 @@ type Props = {
   next: string | null
   onNavigate: (oracleId: string) => void
   onClose: () => void
+  /** Renders extra controls in the header, given the card name once it is loaded. */
+  actions?: (name: string) => ReactNode
 }
 
 /** Escape and a click on the backdrop close it, the arrow keys move through the result. */
-export default function CardDetail({ oracleId, previous, next, onNavigate, onClose }: Props) {
+export default function CardDetail({ oracleId, previous, next, onNavigate, onClose, actions }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const queryClient = useQueryClient()
   const card = useQuery({ queryKey: ['card', oracleId], queryFn: () => fetchCard(oracleId), staleTime: Infinity })
@@ -60,6 +62,7 @@ export default function CardDetail({ oracleId, previous, next, onNavigate, onClo
     >
       <div className="card-detail-body">
         <header>
+          {actions && card.data && actions(card.data.name)}
           <button type="button" aria-label="Previous card" disabled={!previous} onClick={() => previous && onNavigate(previous)}>
             ←
           </button>

@@ -219,3 +219,7 @@ export const setSelectionCard = (id: string, oracleId: string, change: CardChang
 
 export const removeSelectionCard = (id: string, oracleId: string) =>
   request<Selection>(selectionCardPath(id, oracleId), { method: 'DELETE' })
+
+/** Adds each card the filter matches, once. `added` counts the cards that were not there yet. */
+export const addFilteredCards = (id: string, filter: unknown) =>
+  request<{ added: number }>(`${selectionPath(id)}/cards`, sendJson('POST', { filter }))

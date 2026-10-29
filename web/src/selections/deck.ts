@@ -1,4 +1,4 @@
-import type { SelectionAlert, SelectionCard } from '../api'
+import type { Selection, SelectionAlert, SelectionCard } from '../api'
 
 /** A Commander deck holds 100 cards, commanders included. */
 export const DECK_SIZE = 100
@@ -75,4 +75,16 @@ export function alertsByCard(alerts: SelectionAlert[]): Map<string, SelectionAle
   const index = new Map<string, SelectionAlert[]>()
   for (const alert of alerts) index.set(alert.oracle_id, [...(index.get(alert.oracle_id) ?? []), alert])
   return index
+}
+
+/** `quantity` counts the copies in the list, a commander alone has none. */
+export type Membership = { quantity: number; commander: boolean }
+
+export function membership(deck: Pick<Selection, 'commander' | 'partner' | 'cards'>): Map<string, Membership> {
+  const members = new Map<string, Membership>()
+  for (const card of deck.cards) members.set(card.oracle_id, { quantity: card.quantity, commander: false })
+  for (const leader of [deck.commander, deck.partner]) {
+    if (leader) members.set(leader.oracle_id, { quantity: members.get(leader.oracle_id)?.quantity ?? 0, commander: true })
+  }
+  return members
 }

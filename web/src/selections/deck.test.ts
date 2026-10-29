@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SelectionCard } from '../api'
-import { alertText, alertsByCard, groupByType } from './deck'
+import { alertText, alertsByCard, groupByType, membership } from './deck'
 
 const card = (name: string | null, type_line: string | null, quantity = 1): SelectionCard => ({
   oracle_id: name ?? 'gone',
@@ -67,5 +67,29 @@ describe('alerts', () => {
 
     expect(index.get('a')).toHaveLength(2)
     expect(index.get('b')).toBeUndefined()
+  })
+})
+
+describe('membership', () => {
+  it('maps list cards to their quantity and commanders to their role', () => {
+    const deck = {
+      commander: card('cmd', null),
+      partner: card('ptn', null),
+      cards: [card('bolt', null), card('forest', null, 12)],
+    }
+
+    const members = membership(deck)
+
+    expect(members.get('bolt')).toEqual({ quantity: 1, commander: false })
+    expect(members.get('forest')).toEqual({ quantity: 12, commander: false })
+    expect(members.get('cmd')).toEqual({ quantity: 0, commander: true })
+    expect(members.get('ptn')).toEqual({ quantity: 0, commander: true })
+    expect(members.has('other')).toBe(false)
+  })
+
+  it('keeps the quantity of a commander that is also in the list', () => {
+    const members = membership({ commander: card('cmd', null), partner: null, cards: [card('cmd', null, 2)] })
+
+    expect(members.get('cmd')).toEqual({ quantity: 2, commander: true })
   })
 })
