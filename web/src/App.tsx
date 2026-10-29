@@ -3,17 +3,20 @@ import { useEffect, useState } from 'react'
 import { shouldRetry } from './api'
 import SourcesPanel from './SourcesPanel'
 import Explorer from './search/Explorer'
+import SelectionsScreen from './selections/SelectionsScreen'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: shouldRetry } } })
 
 const SCREENS = [
   ['/', 'Explorer'],
+  ['/selections', 'Selections'],
   ['/settings', 'Settings'],
 ] as const
 
 type Path = (typeof SCREENS)[number][0]
 
-const currentPath = (): Path => (window.location.pathname === '/settings' ? '/settings' : '/')
+const currentPath = (): Path =>
+  SCREENS.find(([target]) => target === window.location.pathname)?.[0] ?? '/'
 
 export default function App() {
   const [path, setPath] = useState<Path>(currentPath)
@@ -48,7 +51,11 @@ export default function App() {
             </a>
           ))}
         </nav>
-        <main>{path === '/' ? <Explorer /> : <SourcesPanel />}</main>
+        <main>
+          {path === '/' && <Explorer />}
+          {path === '/selections' && <SelectionsScreen />}
+          {path === '/settings' && <SourcesPanel />}
+        </main>
       </div>
     </QueryClientProvider>
   )

@@ -47,8 +47,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     throw new HttpError(response.status, (await response.text()) || `HTTP ${response.status}`)
   }
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
+
+const sendJson = (method: string, body: unknown): RequestInit => ({
+  method,
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body),
+})
 
 export const fetchCatalog = () => request<CatalogStatus>('/api/catalog')
 
@@ -140,3 +147,75 @@ export type CardDetail = CardFace & {
 }
 
 export const fetchCard = (oracleId: string) => request<CardDetail>(`/api/cards/${encodeURIComponent(oracleId)}`)
+
+export type SelectionSummary = {
+  selection_id: string
+  name: string
+  commander_name: string | null
+  partner_name: string | null
+  count: number
+  updated_at: string
+}
+
+export type SelectionCard = {
+  oracle_id: string
+  /** Null when a sync removed the card from the catalog. */
+  name: string | null
+  mana_cost: string | null
+  type_line: string | null
+  cmc: number | null
+  quantity: number
+  print_id: string | null
+  image_small: string | null
+  double_faced: boolean
+  category: string | null
+}
+
+export type SelectionAlert =
+  | { kind: 'singleton'; oracle_id: string; name: string; quantity: number; limit: number }
+  | { kind: 'outside_identity' | 'not_commander' | 'commander_in_list'; oracle_id: string; name: string }
+  | { kind: 'not_legal'; oracle_id: string; name: string; status: string }
+  | { kind: 'missing_card'; oracle_id: string }
+
+export type Selection = {
+  selection_id: string
+  name: string
+  notes: string
+  commander: SelectionCard | null
+  partner: SelectionCard | null
+  updated_at: string
+  count: number
+  cards: SelectionCard[]
+  alerts: SelectionAlert[]
+}
+
+export type SelectionMeta = {
+  name: string
+  notes: string
+  commander_oracle_id: string | null
+  partner_oracle_id: string | null
+}
+
+export type CardChange = { quantity: number; print_id: string | null; category: string | null }
+
+const selectionPath = (id: string) => `/api/selections/${encodeURIComponent(id)}`
+const selectionCardPath = (id: string, oracleId: string) => `${selectionPath(id)}/cards/${encodeURIComponent(oracleId)}`
+
+export const fetchSelections = () => request<SelectionSummary[]>('/api/selections')
+
+export const createSelection = (name: string) => request<Selection>('/api/selections', sendJson('POST', { name }))
+
+export const fetchSelection = (id: string) => request<Selection>(selectionPath(id))
+
+export const updateSelection = (id: string, meta: SelectionMeta) => request<Selection>(selectionPath(id), sendJson('PUT', meta))
+
+export const deleteSelection = (id: string) => request<void>(selectionPath(id), { method: 'DELETE' })
+
+export const addSelectionCard = (id: string, oracleId: string) =>
+  request<Selection>(selectionCardPath(id, oracleId), { method: 'POST' })
+
+export const setSelectionCard = (id: string, oracleId: string, change: CardChange) =>
+  request<Selection>(selectionCardPath(id, oracleId), sendJson('PUT', change))
+
+export const removeSelectionCard = (id: string, oracleId: string) =>
+  request<Selection>(selectionCardPath(id, oracleId), { method: 'DELETE' })

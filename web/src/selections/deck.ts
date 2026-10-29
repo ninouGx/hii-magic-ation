@@ -1,0 +1,78 @@
+import type { SelectionAlert, SelectionCard } from '../api'
+
+/** A Commander deck holds 100 cards, commanders included. */
+export const DECK_SIZE = 100
+
+export type TypeGroup = { label: string; cards: SelectionCard[]; count: number }
+
+/** Precedence decides the group of a card with several types, display order is separate. */
+const PRECEDENCE: [string, string][] = [
+  ['Creature', 'Creatures'],
+  ['Land', 'Lands'],
+  ['Planeswalker', 'Planeswalkers'],
+  ['Battle', 'Battles'],
+  ['Instant', 'Instants'],
+  ['Sorcery', 'Sorceries'],
+  ['Artifact', 'Artifacts'],
+  ['Enchantment', 'Enchantments'],
+]
+
+const MISSING = 'Missing from the catalog'
+const OTHER = 'Other'
+
+const DISPLAY_ORDER = [
+  'Creatures',
+  'Planeswalkers',
+  'Battles',
+  'Instants',
+  'Sorceries',
+  'Artifacts',
+  'Enchantments',
+  'Lands',
+  OTHER,
+  MISSING,
+]
+
+function groupLabel(card: SelectionCard): string {
+  if (card.name === null) return MISSING
+  const frontType = (card.type_line ?? '').split(' // ')[0]
+  const words = frontType.split(/[\s—-]+/)
+  return PRECEDENCE.find(([type]) => words.includes(type))?.[1] ?? OTHER
+}
+
+/** Groups keep the card order of the API and skip empty types. */
+export function groupByType(cards: SelectionCard[]): TypeGroup[] {
+  const groups = new Map<string, SelectionCard[]>()
+  for (const card of cards) {
+    const label = groupLabel(card)
+    groups.set(label, [...(groups.get(label) ?? []), card])
+  }
+  return DISPLAY_ORDER.flatMap((label) => {
+    const members = groups.get(label)
+    if (!members) return []
+    return [{ label, cards: members, count: members.reduce((sum, card) => sum + card.quantity, 0) }]
+  })
+}
+
+export function alertText(alert: SelectionAlert): string {
+  switch (alert.kind) {
+    case 'singleton':
+      return `${alert.quantity} copies of ${alert.name}, the limit is ${alert.limit}.`
+    case 'outside_identity':
+      return `${alert.name} is outside the color identity of the commander.`
+    case 'not_legal':
+      return `${alert.name} is ${alert.status.replace('_', ' ')} in Commander.`
+    case 'not_commander':
+      return `${alert.name} cannot be a commander.`
+    case 'commander_in_list':
+      return `${alert.name} is a commander and is also in the list.`
+    case 'missing_card':
+      return 'A card is no longer in the catalog.'
+  }
+}
+
+export function alertsByCard(alerts: SelectionAlert[]): Map<string, SelectionAlert[]> {
+  const index = new Map<string, SelectionAlert[]>()
+  for (const alert of alerts) index.set(alert.oracle_id, [...(index.get(alert.oracle_id) ?? []), alert])
+  return index
+}

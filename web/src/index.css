@@ -360,3 +360,107 @@ button {
 .rulings {
   padding-left: var(--space);
 }
+
+.selections-screen {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  gap: calc(var(--space) * 1.5);
+  align-items: start;
+}
+
+@media (max-width: 48rem) {
+  .selections-screen {
+    grid-template-columns: 1fr;
+  }
+}
+
+.selection-list,
+.suggestions,
+.type-group ul {
+  padding: 0;
+  list-style: none;
+}
+
+.selection-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  margin-block: calc(var(--space) / 4);
+  text-align: left;
+  border-color: transparent;
+}
+
+.selection-list button[aria-current='true'] {
+  border-color: var(--fg);
+  background: var(--surface);
+}
+
+.selection-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+  align-items: center;
+}
+
+.selection-name {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.deck-count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-count[data-over='true'],
+.danger {
+  color: var(--danger);
+}
+
+.commanders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+  margin-block: var(--space);
+}
+
+.commander-picker {
+  min-width: 16rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.suggestions button {
+  width: 100%;
+  text-align: left;
+  border-color: transparent;
+}
+
+.alerts li {
+  color: var(--danger);
+}
+
+.type-group li {
+  display: flex;
+  gap: calc(var(--space) / 2);
+  align-items: center;
+  padding-block: 2px;
+}
+
+.type-group input[type='number'] {
+  width: 3.5rem;
+}
+
+.type-group .card-name {
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.type-group li[data-alert='true'] .card-name,
+.alert-mark {
+  color: var(--danger);
+}
