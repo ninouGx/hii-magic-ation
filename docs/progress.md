@@ -30,7 +30,9 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
 - [x] F5 grid: progressive image quality (`thumb`, then `grid` or `display` by `srcset`), double-faced badge that flips the card
 - [x] F5 detail window: centered over the grid, arrows move through the result, Escape or a click outside closes it, card in the URL
 - [ ] F5 category view, print choice in the detail window
-- [ ] F9 selections: core, API, Selections screen, add from the grid, the detail window and in bulk
+- [x] F9 selections, back end: user migrations, `hma_core::selection`, `/api/selections` (17 core tests, Gemini review applied)
+- [ ] F9 selections, front: Selections screen (list, create, rename, delete, commander picker through the search API with `commander_eligible`, cards by type, count out of 100, alerts, quantity and removal)
+- [ ] F9 selections, Explorer: active selection in the URL (`selection=`), add and remove from a tile and from the detail window, "in selection" badge on tiles, add all results of the filter
 - [ ] F3 deck mode: with a selection commander, an identity rule is added and can be turned off
 - [ ] F10 Moxfield export, first deck imported
 
