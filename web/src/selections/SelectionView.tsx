@@ -13,7 +13,9 @@ import {
 import CardDetail from '../search/CardDetail'
 import { neighbor } from '../search/neighbor'
 import CommanderPicker from './CommanderPicker'
-import { DECK_SIZE, alertText, alertsByCard, groupByType } from './deck'
+import { DECK_SIZE, alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, type AlertGroup } from './deck'
+
+const OPEN_ALERT_LIMIT = 5
 
 type Props = {
   selectionId: string
@@ -111,13 +113,9 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
       {deck.alerts.length > 0 && (
         <section aria-label="Alerts" className="alerts">
           <h3>Alerts ({deck.alerts.length})</h3>
-          <ul>
-            {deck.alerts.map((alert, index) => (
-              <li key={index} data-kind={alert.kind}>
-                {alertText(alert)}
-              </li>
-            ))}
-          </ul>
+          {groupAlerts(deck.alerts).map((group) => (
+            <AlertDetails key={group.kind} group={group} />
+          ))}
         </section>
       )}
 
@@ -129,7 +127,7 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
           </h3>
           <ul>
             {group.cards.map((card) => (
-              <li key={card.oracle_id} data-alert={alerts.has(card.oracle_id)}>
+              <li key={card.oracle_id} data-alert={alerts.get(card.oracle_id)?.some(isSerious) ?? false}>
                 <QuantityInput
                   key={card.quantity}
                   label={`Copies of ${card.name ?? card.oracle_id}`}
@@ -144,11 +142,11 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
                   <span className="card-name">{card.oracle_id}</span>
                 )}
                 {card.mana_cost && <span className="mana">{card.mana_cost}</span>}
-                {alerts.has(card.oracle_id) && (
-                  <span className="alert-mark" title={alerts.get(card.oracle_id)?.map(alertText).join(' ')}>
-                    ⚠
+                {alerts.get(card.oracle_id)?.map((alert) => (
+                  <span key={alert.kind} className="alert-label" data-serious={isSerious(alert)} title={alertText(alert)}>
+                    {alertLabel(alert)}
                   </span>
-                )}
+                ))}
                 <button
                   type="button"
                   aria-label={`Remove ${card.name ?? card.oracle_id}`}
@@ -240,5 +238,19 @@ function DeleteButton({ name, pending, onConfirm }: { name: string; pending: boo
         Cancel
       </button>
     </span>
+  )
+}
+
+/**
+ * A long group of theme choices starts closed, so a deck full of off-color cards does not push the list down.
+ * After that, only the user opens or closes it.
+ */
+function AlertDetails({ group }: { group: AlertGroup }) {
+  const [open, setOpen] = useState(() => isSerious(group) || group.cards.length <= OPEN_ALERT_LIMIT)
+  return (
+    <details data-serious={isSerious(group)} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{group.title}</summary>
+      <p>{group.cards.join(' · ')}</p>
+    </details>
   )
 }

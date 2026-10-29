@@ -71,6 +71,61 @@ export function alertText(alert: SelectionAlert): string {
   }
 }
 
+type AlertKind = SelectionAlert['kind']
+
+/** Most serious first: a card that breaks the deck before one that only bends the theme. */
+const ALERT_GROUPS: [AlertKind, string][] = [
+  ['missing_card', 'Missing from the catalog'],
+  ['not_commander', 'Cannot be a commander'],
+  ['not_legal', 'Not legal in Commander'],
+  ['singleton', 'Too many copies'],
+  ['commander_in_list', 'Commander also in the list'],
+  ['outside_identity', 'Outside the color identity of the commander'],
+]
+
+export type AlertGroup = { kind: AlertKind; title: string; cards: string[] }
+
+/** Off-color cards and a commander kept in the list are choices a theme deck can make on purpose. */
+export const isSerious = (alert: { kind: AlertKind }) => alert.kind !== 'outside_identity' && alert.kind !== 'commander_in_list'
+
+function alertCard(alert: SelectionAlert): string {
+  switch (alert.kind) {
+    case 'singleton':
+      return `${alert.name}, ${alert.quantity} of ${alert.limit}`
+    case 'not_legal':
+      return `${alert.name}, ${alert.status.replace('_', ' ')}`
+    case 'missing_card':
+      return alert.oracle_id
+    default:
+      return alert.name
+  }
+}
+
+export function groupAlerts(alerts: SelectionAlert[]): AlertGroup[] {
+  return ALERT_GROUPS.flatMap(([kind, label]) => {
+    const cards = alerts.filter((alert) => alert.kind === kind).map(alertCard)
+    return cards.length === 0 ? [] : [{ kind, title: `${label} (${cards.length})`, cards }]
+  })
+}
+
+/** A few words shown beside the card in the list. */
+export function alertLabel(alert: SelectionAlert): string {
+  switch (alert.kind) {
+    case 'singleton':
+      return `limit ${alert.limit}`
+    case 'outside_identity':
+      return 'off-color'
+    case 'not_legal':
+      return alert.status.replace('_', ' ')
+    case 'not_commander':
+      return 'not a commander'
+    case 'commander_in_list':
+      return 'also commander'
+    case 'missing_card':
+      return 'missing'
+  }
+}
+
 export function alertsByCard(alerts: SelectionAlert[]): Map<string, SelectionAlert[]> {
   const index = new Map<string, SelectionAlert[]>()
   for (const alert of alerts) index.set(alert.oracle_id, [...(index.get(alert.oracle_id) ?? []), alert])

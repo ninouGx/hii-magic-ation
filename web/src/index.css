@@ -473,8 +473,31 @@ button {
   border-color: transparent;
 }
 
-.alerts li {
+.alerts details {
+  margin-block: calc(var(--space) / 4);
+}
+
+.alerts summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.alerts details p {
+  margin: calc(var(--space) / 4) 0 0 var(--space);
+  color: var(--muted);
+}
+
+.alerts details[data-serious='true'] summary,
+.alert-label[data-serious='true'] {
   color: var(--danger);
+}
+
+.alert-label {
+  padding: 0 6px;
+  border: 1px solid currentcolor;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .type-group li {
@@ -496,7 +519,6 @@ button {
   cursor: pointer;
 }
 
-.type-group li[data-alert='true'] .card-name,
-.alert-mark {
+.type-group li[data-alert='true'] .card-name {
   color: var(--danger);
 }
