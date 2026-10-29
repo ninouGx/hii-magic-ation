@@ -7,7 +7,10 @@ use crate::selection::{SelectionError, ensure_exists};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Export {
+    /// The deck without its commanders, ready to paste.
     pub text: String,
+    /// Commander and partner lines. Moxfield picks them in its deck form, so they stay out of `text`.
+    pub commanders: Vec<String>,
     /// Oracle ids a sync removed from the catalog, left out of `text`.
     pub skipped: Vec<String>,
 }
@@ -23,8 +26,7 @@ pub fn line(quantity: i32, name: &str, print: Option<(&str, &str)>) -> String {
     }
 }
 
-/// Commanders come first with no header, as in Moxfield's own export, since its
-/// import picks the commander in the deck form and reads no section marker.
+/// Commanders come first, flagged by `rank` below 2.
 /// Double-faced and adventure cards go by their front name, split cards by both halves.
 const EXPORT_SQL: &str = "
 WITH s AS (SELECT * FROM selections WHERE selection_id = $1),
@@ -44,7 +46,8 @@ entries AS (
 SELECT e.oracle_id, e.quantity,
        CASE WHEN c.layout = 'split' THEN c.name ELSE c.front_name END,
        CASE WHEN p.print_id IS NULL THEN dp.set_code ELSE p.set_code END,
-       CASE WHEN p.print_id IS NULL THEN dp.collector_number ELSE p.collector_number END
+       CASE WHEN p.print_id IS NULL THEN dp.collector_number ELSE p.collector_number END,
+       e.rank
 FROM entries AS e
 LEFT JOIN catalog.cards AS c ON c.oracle_id = e.oracle_id
 LEFT JOIN catalog.prints AS p ON p.print_id = e.print_id
@@ -56,6 +59,7 @@ pub fn moxfield(conn: &Connection, selection_id: &str) -> Result<Export, Selecti
     let mut stmt = conn.prepare(EXPORT_SQL)?;
     let rows = stmt.query_map([selection_id], |row| {
         Ok((
+            row.get::<_, i32>(5)? < 2,
             row.get::<_, String>(0)?,
             row.get::<_, i32>(1)?,
             row.get::<_, Option<String>>(2)?,
@@ -64,19 +68,24 @@ pub fn moxfield(conn: &Connection, selection_id: &str) -> Result<Export, Selecti
         ))
     })?;
     let mut lines = Vec::new();
+    let mut commanders = Vec::new();
     let mut skipped = Vec::new();
     for row in rows {
-        let (oracle_id, quantity, name, set_code, number) = row?;
-        match name {
-            Some(name) => {
-                let print = set_code.as_deref().zip(number.as_deref());
-                lines.push(line(quantity, &name, print));
-            }
-            None => skipped.push(oracle_id),
+        let (commander, oracle_id, quantity, name, set_code, number) = row?;
+        let Some(name) = name else {
+            skipped.push(oracle_id);
+            continue;
+        };
+        let entry = line(quantity, &name, set_code.as_deref().zip(number.as_deref()));
+        if commander {
+            commanders.push(entry);
+        } else {
+            lines.push(entry);
         }
     }
     Ok(Export {
         text: lines.join("\n"),
+        commanders,
         skipped,
     })
 }

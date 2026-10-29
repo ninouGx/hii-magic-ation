@@ -301,10 +301,18 @@ function ExportPanel({ deck }: { deck: Selection }) {
   return (
     <details className="export">
       <summary>Export for Moxfield</summary>
-      <p className="hint">
-        In Moxfield, click + New Deck, choose the Commander format and your commander, then paste this list. The commanders come
-        first, with the print chosen here.
-      </p>
+      <ol className="hint">
+        <li>In Moxfield, click + New Deck and choose the Commander format.</li>
+        <li>Pick the commander below, then set the print shown here on its Moxfield card.</li>
+        <li>Paste the list, which leaves the commanders out.</li>
+      </ol>
+      {exported.data && exported.data.commanders.length > 0 && (
+        <ul className="export-commanders" aria-label="Commanders">
+          {exported.data.commanders.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
       {exported.isError && <p role="alert">{exported.error.message}</p>}
       <textarea readOnly aria-label="Moxfield list" rows={12} value={text} />
       <p className="actions">

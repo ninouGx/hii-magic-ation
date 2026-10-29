@@ -19,7 +19,7 @@ Local web app to explore every Commander-legal Magic card, build themed card sel
 - `cargo run -p hii-magic-ation`: serve on 127.0.0.1:7878. Front dev server: `npm run dev` in `web/`, it proxies `/api`.
 - Config: `$XDG_CONFIG_HOME/hii-magic-ation/config.toml`, overridden by `HMA_*` variables. Data: `$XDG_DATA_HOME/hii-magic-ation`.
 - Commit chain, so a failed check never lets a commit through: `./scripts/check.sh > target/check.log 2>&1 && zsh -ic cv > target/cv.log 2>&1 && ! grep -qE '^(error|warning)' target/cv.log && git commit ...`. Run `zsh -ic cf` first after edits made with sed or scripts.
-- Manual test in a browser: Nils often runs his own server on 7878, and it holds the lock on `user.duckdb`. Copy the catalog to `target/verify/data/` and run `HMA_DATA_DIR=$PWD/target/verify/data HMA_BIND=127.0.0.1:7879 cargo run -p hii-magic-ation -- serve`. Stop it by its port owner, `fuser -k 7879/tcp`. Never stop it by a command-line pattern, the 7878 server has the same command line.
+- Manual test in a browser: Nils often runs his own server on 7878, and it holds the lock on `user.duckdb`. Stopping it is fine, the project is in development and his data there is test data. Copy the catalog to `target/verify/data/` and run `HMA_DATA_DIR=$PWD/target/verify/data HMA_BIND=127.0.0.1:7879 cargo run -p hii-magic-ation -- serve`. Stop it by its port owner, `fuser -k 7879/tcp`. Never stop it by a command-line pattern, the 7878 server has the same command line.
 
 ## Rules
 

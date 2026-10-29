@@ -57,7 +57,7 @@ fn export(db: &Db, deck: &Selection) -> Export {
 }
 
 #[test]
-fn commander_comes_first_with_its_chosen_print() {
+fn commander_is_listed_apart_with_its_chosen_print() {
     let (_dir, db) = fresh_db();
     let (print_id, label) = print_label(&db, "Dragonlord Atarka", false);
     let deck = deck_with(
@@ -67,12 +67,10 @@ fn commander_comes_first_with_its_chosen_print() {
         &["Lightning Bolt"],
     );
 
-    let text = export(&db, &deck).text;
+    let result = export(&db, &deck);
 
-    assert_eq!(
-        text.lines().next(),
-        Some(format!("1 Dragonlord Atarka {label}").as_str())
-    );
+    assert_eq!(result.commanders, [format!("1 Dragonlord Atarka {label}")]);
+    assert!(!result.text.contains("Dragonlord Atarka"));
 }
 
 #[test]
@@ -132,7 +130,6 @@ fn double_faced_and_adventure_cards_use_the_front_name_and_split_cards_keep_both
     let names: Vec<String> = export(&db, &deck)
         .text
         .lines()
-        .skip(1)
         .map(|line| line.split(" (").next().unwrap().to_owned())
         .collect();
 
@@ -147,7 +144,7 @@ fn double_faced_and_adventure_cards_use_the_front_name_and_split_cards_keep_both
 }
 
 #[test]
-fn quantities_are_written_and_a_commander_in_the_list_appears_once() {
+fn quantities_are_written_and_a_commander_in_the_list_stays_out_of_it() {
     let (_dir, db) = fresh_db();
     let deck = deck_with(
         &db,
@@ -156,15 +153,11 @@ fn quantities_are_written_and_a_commander_in_the_list_appears_once() {
         &["Sol Ring", "Sol Ring", "Sol Ring", "Dragonlord Atarka"],
     );
 
-    let text = export(&db, &deck).text;
+    let result = export(&db, &deck);
 
-    assert_eq!(
-        text.lines()
-            .filter(|line| line.contains("Dragonlord Atarka"))
-            .count(),
-        1
-    );
-    assert!(text.lines().any(|line| line.starts_with("3 Sol Ring (")));
+    assert_eq!(result.text.lines().count(), 1);
+    assert!(result.text.starts_with("3 Sol Ring ("));
+    assert_eq!(result.commanders.len(), 1);
 }
 
 #[test]

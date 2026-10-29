@@ -242,11 +242,12 @@ mod tests {
         assert_eq!(bad_quantity, StatusCode::BAD_REQUEST);
         assert_eq!(exported, StatusCode::OK);
         assert!(
-            export["text"]
+            export["commanders"][0]
                 .as_str()
                 .unwrap()
                 .starts_with("1 Dragonlord Atarka (")
         );
+        assert!(!export["text"].as_str().unwrap().contains("Atarka"));
         assert_eq!(missing_export, StatusCode::NOT_FOUND);
         assert_eq!(list[0]["commander_name"], "Dragonlord Atarka");
         assert_eq!(

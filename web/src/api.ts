@@ -228,7 +228,10 @@ export const removeSelectionCard = (id: string, oracleId: string) =>
 export const addFilteredCards = (id: string, filter: unknown) =>
   request<{ added: number }>(`${selectionPath(id)}/cards`, sendJson('POST', { filter }))
 
-/** Moxfield import text, and the oracle ids a sync removed from the catalog, left out of it. */
-export type SelectionExport = { text: string; skipped: string[] }
+/**
+ * Moxfield import text without the commanders, which Moxfield picks in its deck form.
+ * `skipped` lists the oracle ids a sync removed from the catalog.
+ */
+export type SelectionExport = { text: string; commanders: string[]; skipped: string[] }
 
 export const fetchSelectionExport = (id: string) => request<SelectionExport>(`${selectionPath(id)}/export`)
