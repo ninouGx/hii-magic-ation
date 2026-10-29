@@ -43,7 +43,7 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
   - Print choice when adding stays with the F5 print item below
 - [x] Selection alerts grouped by kind, serious ones first and open, a short label on each card. Off-color and a commander in the list stay neutral, since a theme deck can choose them
 - [x] F3 deck mode: with a selection commander, an identity rule is added and can be turned off (decision 34)
-- [ ] F10 Moxfield export, first deck imported: code done (decision 37), print change checked by Nils, full 100-card import pending
+- [x] F10 Moxfield export, first deck imported (decision 37). On 2026-10-29 Nils imported 117 cards plus the commander. Moxfield's re-export matched every name, set and collector number, with no unrecognized card
 
 ## M4, enrichment
 
