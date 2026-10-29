@@ -1,6 +1,7 @@
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use hma_core::export::{self, Export};
 use hma_core::filter::{FilterError, Group};
 use hma_core::selection::{
     self, CardChange, Selection, SelectionError, SelectionMeta, SelectionSummary,
@@ -98,6 +99,13 @@ pub async fn remove_card(
         Ok(selection::remove_card(conn, &id, &oracle_id)?)
     })
     .await
+}
+
+pub async fn export_moxfield(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Export>, ApiError> {
+    on_catalog(state, move |conn| Ok(export::moxfield(conn, &id)?)).await
 }
 
 #[derive(Deserialize)]
@@ -219,15 +227,27 @@ mod tests {
             Some(json!({ "quantity": 0, "print_id": null, "category": null })),
         )
         .await;
+        let (exported, export) =
+            send(&state, "GET", &format!("/api/selections/{id}/export"), None).await;
         let (_, list) = send(&state, "GET", "/api/selections", None).await;
         let (deleted, _) = send(&state, "DELETE", &format!("/api/selections/{id}"), None).await;
         let (missing, _) = send(&state, "GET", &format!("/api/selections/{id}"), None).await;
+        let (missing_export, _) =
+            send(&state, "GET", &format!("/api/selections/{id}/export"), None).await;
 
         assert_eq!((created, updated), (StatusCode::CREATED, StatusCode::OK));
         assert_eq!(deck["count"], 2);
         assert_eq!(deck["alerts"][0]["kind"], "outside_identity");
         assert_eq!(added["added"], 2);
         assert_eq!(bad_quantity, StatusCode::BAD_REQUEST);
+        assert_eq!(exported, StatusCode::OK);
+        assert!(
+            export["text"]
+                .as_str()
+                .unwrap()
+                .starts_with("1 Dragonlord Atarka (")
+        );
+        assert_eq!(missing_export, StatusCode::NOT_FOUND);
         assert_eq!(list[0]["commander_name"], "Dragonlord Atarka");
         assert_eq!(
             (deleted, missing),

@@ -523,3 +523,9 @@ button {
 .type-group li[data-alert='true'] .card-name {
   color: var(--danger);
 }
+
+.export textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}

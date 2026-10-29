@@ -57,6 +57,10 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/selections/{id}/cards", post(selection_api::add_filtered))
         .route(
+            "/selections/{id}/export",
+            get(selection_api::export_moxfield),
+        )
+        .route(
             "/selections/{id}/cards/{oracle_id}",
             post(selection_api::add_card)
                 .put(selection_api::set_card)

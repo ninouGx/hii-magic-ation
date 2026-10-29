@@ -571,7 +571,7 @@ fn alerts(conn: &Connection, selection_id: &str) -> Result<Vec<Alert>, Selection
     Ok(rows.collect::<Result<_, _>>()?)
 }
 
-fn ensure_exists(conn: &Connection, selection_id: &str) -> Result<(), SelectionError> {
+pub(crate) fn ensure_exists(conn: &Connection, selection_id: &str) -> Result<(), SelectionError> {
     let found: bool = conn.query_row(
         "SELECT count(*) > 0 FROM selections WHERE selection_id = ?",
         [selection_id],

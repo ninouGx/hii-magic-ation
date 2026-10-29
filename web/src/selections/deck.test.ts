@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SelectionCard } from '../api'
-import { alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, membership, printRequest, selectionMeta } from './deck'
+import { alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, exportFileName, membership, printRequest, selectionMeta } from './deck'
 
 const card = (name: string | null, type_line: string | null, quantity = 1): SelectionCard => ({
   oracle_id: name ?? 'gone',
@@ -155,5 +155,12 @@ describe('print choice', () => {
 
   it('has nothing to save for a card outside the selection', () => {
     expect(printRequest(deck, 'other', 'x')).toBeNull()
+  })
+})
+
+describe('exportFileName', () => {
+  it('names the file after the selection without characters a file system refuses', () => {
+    expect(exportFileName('Dragons: fire/ice?')).toBe('Dragons- fire-ice-.txt')
+    expect(exportFileName('  ')).toBe('selection.txt')
   })
 })

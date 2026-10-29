@@ -174,3 +174,8 @@ export function savedPrint(deck: DeckParts, oracleId: string, defaultPrintId: st
   const card = [deck.commander, deck.partner, ...deck.cards].find((candidate) => candidate?.oracle_id === oracleId)
   return card ? (card.print_id ?? defaultPrintId) : undefined
 }
+
+export function exportFileName(name: string): string {
+  const safe = name.replace(/[\\/:*?"<>|]/g, '-').trim()
+  return `${safe || 'selection'}.txt`
+}

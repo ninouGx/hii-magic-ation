@@ -227,3 +227,8 @@ export const removeSelectionCard = (id: string, oracleId: string) =>
 /** Adds each card the filter matches, once. `added` counts the cards that were not there yet. */
 export const addFilteredCards = (id: string, filter: unknown) =>
   request<{ added: number }>(`${selectionPath(id)}/cards`, sendJson('POST', { filter }))
+
+/** Moxfield import text, and the oracle ids a sync removed from the catalog, left out of it. */
+export type SelectionExport = { text: string; skipped: string[] }
+
+export const fetchSelectionExport = (id: string) => request<SelectionExport>(`${selectionPath(id)}/export`)

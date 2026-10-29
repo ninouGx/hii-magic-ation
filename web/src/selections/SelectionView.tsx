@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import {
+  fetchSelectionExport,
   deleteSelection,
   fetchSelection,
   removeSelectionCard,
@@ -14,7 +15,7 @@ import CardDetail from '../search/CardDetail'
 import { neighbor } from '../search/neighbor'
 import CommanderPicker from './CommanderPicker'
 import { useChoosePrint } from './activeSelection'
-import { DECK_SIZE, alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, selectionMeta, type AlertGroup } from './deck'
+import { DECK_SIZE, exportFileName, alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, selectionMeta, type AlertGroup } from './deck'
 import { PrintChoice } from './SelectionControls'
 
 const OPEN_ALERT_LIMIT = 5
@@ -120,6 +121,8 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
           ))}
         </section>
       )}
+
+      <ExportPanel deck={deck} />
 
       {groups.length === 0 && <p className="hint">No card yet. Add cards from the Explorer.</p>}
       {groups.map((group) => (
@@ -264,6 +267,59 @@ function AlertDetails({ group }: { group: AlertGroup }) {
     <details data-serious={isSerious(group)} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>{group.title}</summary>
       <p>{group.cards.join(' · ')}</p>
+    </details>
+  )
+}
+
+/** The query key follows `updated_at`, so the text follows each change. */
+function ExportPanel({ deck }: { deck: Selection }) {
+  const exported = useQuery({
+    queryKey: ['export', deck.selection_id, deck.updated_at],
+    queryFn: () => fetchSelectionExport(deck.selection_id),
+  })
+  const [copied, setCopied] = useState<'done' | 'failed' | null>(null)
+  const text = exported.data?.text ?? ''
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied('done')
+      window.setTimeout(() => setCopied(null), 2000)
+    } catch {
+      setCopied('failed')
+    }
+  }
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([`${text}\n`], { type: 'text/plain' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = exportFileName(deck.name)
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <details className="export">
+      <summary>Export for Moxfield</summary>
+      <p className="hint">
+        In Moxfield, click + New Deck, choose the Commander format and your commander, then paste this list. The commanders come
+        first, with the print chosen here.
+      </p>
+      {exported.isError && <p role="alert">{exported.error.message}</p>}
+      <textarea readOnly aria-label="Moxfield list" rows={12} value={text} />
+      <p className="actions">
+        <button type="button" disabled={text === ''} onClick={() => void copy()}>
+          Copy
+        </button>
+        <button type="button" disabled={text === ''} onClick={download}>
+          Download .txt
+        </button>
+        {copied === 'done' && <span className="hint">Copied.</span>}
+        {copied === 'failed' && <span role="alert">The browser refused the copy. Select the list and copy it by hand.</span>}
+      </p>
+      {exported.data && exported.data.skipped.length > 0 && (
+        <p role="alert">{exported.data.skipped.length} cards no longer in the catalog are left out.</p>
+      )}
     </details>
   )
 }
