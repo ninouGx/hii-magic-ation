@@ -13,13 +13,14 @@ const PAGE_SIZE = 100
 
 type Props = {
   filter: ApiGroup
+  enabled: boolean
   sort: SortKey[]
   openCard: string | null
   onOpenCard: (oracleId: string | null) => void
   active: ActiveSelection
 }
 
-export default function ResultGrid({ filter, sort, openCard, onOpenCard, active }: Props) {
+export default function ResultGrid({ filter, enabled, sort, openCard, onOpenCard, active }: Props) {
   const results = useInfiniteQuery({
     queryKey: ['search', filter, sort],
     queryFn: ({ pageParam, signal }) => searchCards({ filter, sort, offset: pageParam, limit: PAGE_SIZE }, signal),
@@ -29,6 +30,7 @@ export default function ResultGrid({ filter, sort, openCard, onOpenCard, active 
       return loaded < last.total ? loaded : undefined
     },
     placeholderData: (previous) => previous,
+    enabled,
   })
 
   const sentinel = useRef<HTMLDivElement>(null)
@@ -67,7 +69,7 @@ export default function ResultGrid({ filter, sort, openCard, onOpenCard, active 
             ? 'Searching…'
             : `${total.toLocaleString()} cards${results.isFetching && !isFetchingNextPage ? ' · updating…' : ''}`}
       </p>
-      {total !== undefined && !results.isPlaceholderData && (
+      {enabled && total !== undefined && !results.isPlaceholderData && (
         <AddAllButton key={JSON.stringify([filter, active.selection?.selection_id])} filter={filter} total={total} active={active} />
       )}
       {results.isError && <p role="alert">{results.error.message}</p>}

@@ -38,6 +38,7 @@ Each entry departs from or refines the spec. Evidence was measured on the live s
 
 32. **A selection card has a quantity.** The spec lists no quantity column. Without it, basic lands cannot reach their count and the singleton alert has nothing to detect. Adding a card again adds a copy, and the alert flags it. Basic lands and cards that allow any number of copies (Relentless Rats, Seven Dwarves) escape the alert.
 33. **User data has its own migrations.** `user.duckdb` cannot be rebuilt, so each schema change is a numbered SQL file applied once by `Db::open`, tracked in `user_schema_version`.
+34. **Deck mode is a checkbox beside the selection, not a rule in the builder.** The spec adds an identity rule that can be turned off. A rule inside the builder would go into the filter URL and stay after the selection changes. The Explorer sends `AND(filter, color identity at most the commanders)` instead, with the union of the commander and partner identities, and keeps `deck=off` in the URL when it is off. A colorless commander keeps only colorless cards. The grid waits for the commander cards, so no search runs without the rule.
 
 ## Sync and concurrency
 

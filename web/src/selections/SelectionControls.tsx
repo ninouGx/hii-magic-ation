@@ -9,10 +9,14 @@ export function SelectionPicker({
   value,
   active,
   onChange,
+  deck,
+  onDeckChange,
 }: {
   value: string | null
   active: ActiveSelection
   onChange: (id: string | null) => void
+  deck: boolean
+  onDeckChange: (deck: boolean) => void
 }) {
   const list = useQuery({ queryKey: ['selections'], queryFn: fetchSelections })
   const error = list.error ?? active.error
@@ -36,10 +40,18 @@ export function SelectionPicker({
           {active.selection.count} / {DECK_SIZE}
         </span>
       )}
+      {(active.selection?.commander || active.selection?.partner) && (
+        <label>
+          <input type="checkbox" checked={deck} onChange={(event) => onDeckChange(event.target.checked)} /> Only cards within the
+          identity of the {active.selection.commander && active.selection.partner ? 'commanders' : 'commander'} {active.identity ? identityText(active.identity) : '…'}
+        </label>
+      )}
       {error && <p role="alert">{error.message}</p>}
     </div>
   )
 }
+
+const identityText = (identity: string[]) => (identity.length > 0 ? identity.map((color) => `{${color}}`).join('') : '(colorless)')
 
 /** Membership badge and add and remove buttons, for a grid tile and the detail window. */
 export function CardActions({ oracleId, name, active, compact }: { oracleId: string; name: string; active: ActiveSelection; compact?: boolean }) {

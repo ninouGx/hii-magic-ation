@@ -115,6 +115,13 @@ export const DEFAULT_FILTER: RuleGroupType = {
 export type ApiRule = { field: string; operator: string; value: unknown }
 export type ApiGroup = { combinator: string; not?: boolean; rules: (ApiRule | ApiGroup)[] }
 
+/** Deck mode: with a commander identity, the result keeps only cards a Commander deck of that commander can play. */
+export function deckFilter(filter: ApiGroup, identity: string[] | null): ApiGroup {
+  if (identity === null) return filter
+  const rule: ApiRule = { field: 'color_identity', operator: 'at_most', value: identity }
+  return { combinator: 'and', rules: filter.rules.length > 0 ? [filter, rule] : [rule] }
+}
+
 /** Drops incomplete rules and the groups they leave empty, so a rule being
  * typed never changes the result, even under a NOT. */
 export function toApiFilter(group: RuleGroupType): ApiGroup {

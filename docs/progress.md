@@ -40,7 +40,7 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
   - A deleted selection left in the URL is dropped without an error
   - Print choice when adding stays with the F5 print item below
 - [x] Selection alerts grouped by kind, serious ones first and open, a short label on each card. Off-color and a commander in the list stay neutral, since a theme deck can choose them
-- [ ] F3 deck mode: with a selection commander, an identity rule is added and can be turned off
+- [x] F3 deck mode: with a selection commander, an identity rule is added and can be turned off (decision 34)
 - [ ] F10 Moxfield export, first deck imported
 
 ## M4, enrichment

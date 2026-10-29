@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RuleGroupType } from 'react-querybuilder'
-import { DEFAULT_FILTER, findTag, tagSearchText, toApiFilter } from './fields'
+import { DEFAULT_FILTER, deckFilter, findTag, tagSearchText, toApiFilter } from './fields'
 import { DEFAULT_SORT, decodeSearch, encodeSearch } from './urlState'
 import { neighbor } from './neighbor'
 
@@ -113,12 +113,13 @@ describe('URL state', () => {
   })
 
   it('falls back to defaults on a missing or broken URL', () => {
-    expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: null, selection: null })
+    expect(decodeSearch('')).toEqual({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, card: null, selection: null, deck: true })
     expect(decodeSearch('?filter=%7Bnope&sort=[{"field":1}]')).toEqual({
       filter: DEFAULT_FILTER,
       sort: DEFAULT_SORT,
       card: null,
       selection: null,
+      deck: true,
     })
   })
 
@@ -136,6 +137,37 @@ describe('URL state', () => {
 
     expect(decodeSearch(active).selection).toBe('sel-1')
     expect(none).not.toContain('selection=')
+  })
+
+  it('keeps deck mode on by default and writes it only once turned off', () => {
+    const on = encodeSearch({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, deck: true })
+    const off = encodeSearch({ filter: DEFAULT_FILTER, sort: DEFAULT_SORT, deck: false })
+
+    expect(on).not.toContain('deck=')
+    expect(decodeSearch(off).deck).toBe(false)
+    expect(decodeSearch(on).deck).toBe(true)
+  })
+})
+
+describe('deckFilter', () => {
+  const filter = { combinator: 'or', rules: [{ field: 'cmc', operator: '=', value: 2 }] }
+
+  it('leaves the filter alone without a commander identity', () => {
+    expect(deckFilter(filter, null)).toBe(filter)
+  })
+
+  it('keeps the filter and adds the commander identity beside it', () => {
+    expect(deckFilter(filter, ['B', 'G'])).toEqual({
+      combinator: 'and',
+      rules: [filter, { field: 'color_identity', operator: 'at_most', value: ['B', 'G'] }],
+    })
+  })
+
+  it('limits a colorless commander to colorless cards', () => {
+    expect(deckFilter({ combinator: 'and', rules: [] }, [])).toEqual({
+      combinator: 'and',
+      rules: [{ field: 'color_identity', operator: 'at_most', value: [] }],
+    })
   })
 })
 
