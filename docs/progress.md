@@ -43,10 +43,10 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
   - Print choice when adding stays with the F5 print item below
 - [x] Selection alerts grouped by kind, serious ones first and open, a short label on each card. Off-color and a commander in the list stay neutral, since a theme deck can choose them
 - [x] F3 deck mode: with a selection commander, an identity rule is added and can be turned off (decision 34)
-- [x] F10 Moxfield export, first deck imported (decision 37). On 2026-10-29 Nils imported 117 cards plus the commander. Moxfield's re-export matched every name, set and collector number, with no unrecognized card
+- [x] F10 Moxfield export, first deck imported (decision 37). On 2026-10-29 a test deck of 117 cards plus the commander went into Moxfield. Moxfield's re-export matched every name, set and collector number, with no unrecognized card
 
 ## M4, enrichment
 
 - [ ] F5 table view: thumbnail on the left, one column per field, a header click sets the main sort
-  - Build it as one component that the Selections screen reuses for its card list, asked by Nils on 2026-10-29
+  - Build it as one component that the Selections screen reuses for its card list, planned on 2026-10-29
 - [ ] F6, F7, Explorer screen finished

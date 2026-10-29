@@ -1,3 +1,18 @@
 /target
 *.duckdb
 *.duckdb.wal
+*.duckdb.new
+*.duckdb.new.wal
+*.part
+
+# Local, never published
+CLAUDE.local.md
+.claude/settings.local.json
+.env
+.env.*
+
+# Editors and OS
+.idea/
+.vscode/
+*.sw?
+.DS_Store
