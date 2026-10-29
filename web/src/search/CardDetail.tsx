@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { fetchCard, type CardDetail as Card, type CardFace } from '../api'
 import { scryfallImage, type Face } from './images'
+import { tagsForPrint } from './tags'
 
 const PERIOD_LABELS: Record<string, string> = { week: 'Week', month: 'Month', year: '2 years' }
 
@@ -145,7 +146,7 @@ function CardContent({ card }: { card: Card }) {
         </dl>
 
         <Legalities card={card} />
-        <Tags card={card} />
+        <Tags tags={tagsForPrint(card.tags, print)} />
 
         <h3>Prints ({card.prints.length})</h3>
         <ul className="prints">
@@ -207,16 +208,18 @@ function Legalities({ card }: { card: Card }) {
   )
 }
 
-function Tags({ card }: { card: Card }) {
-  const kinds = [...new Set(card.tags.map((tag) => tag.kind))]
+function Tags({ tags }: { tags: Card['tags'] }) {
+  const kinds = [...new Set(tags.map((tag) => tag.kind))]
   return (
     <>
-      <h3>Tags ({card.tags.length})</h3>
+      <h3>Tags ({tags.length})</h3>
       {kinds.map((kind) => (
         <div key={kind}>
-          <h4>{kind === 'art' ? 'Art' : kind === 'oracle' ? 'Oracle' : kind}</h4>
+          <h4>
+            {kind === 'art' ? 'Art, this print' : kind === 'oracle' ? 'Oracle' : kind} ({tags.filter((tag) => tag.kind === kind).length})
+          </h4>
           <ul className="tags">
-            {card.tags
+            {tags
               .filter((tag) => tag.kind === kind)
               .map((tag) => (
                 <li key={tag.tag_id} title={tag.source}>

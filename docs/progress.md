@@ -29,7 +29,9 @@ Milestones from the spec. A box is checked when its acceptance criteria pass.
 
 - [x] F5 grid: progressive image quality (`thumb`, then `grid` or `display` by `srcset`), double-faced badge that flips the card
 - [x] F5 detail window: centered over the grid, arrows move through the result, Escape or a click outside closes it, card in the URL
-- [ ] F5 category view, print choice in the detail window
+- [x] F5 print change in the detail window updates the image and the art tags of that print (decision 35)
+- [ ] F5 print choice saved in the selection, commanders included
+- [ ] F5 category view
 - [x] F9 selections, back end: user migrations, `hma_core::selection`, `/api/selections` (17 core tests, Gemini review applied)
 - [x] F9 selections, front: Selections screen (list, create, rename, delete, commander picker through the search API with `commander_eligible`, cards by type, count out of 100, alerts, quantity and removal)
   - Selection and open card in the URL (`/selections?id=&card=`), a reload restores both

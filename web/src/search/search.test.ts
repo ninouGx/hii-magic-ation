@@ -3,6 +3,7 @@ import type { RuleGroupType } from 'react-querybuilder'
 import { DEFAULT_FILTER, deckFilter, findTag, tagSearchText, toApiFilter } from './fields'
 import { DEFAULT_SORT, decodeSearch, encodeSearch } from './urlState'
 import { neighbor } from './neighbor'
+import { tagsForPrint } from './tags'
 
 const group = (rules: RuleGroupType['rules'], not = false): RuleGroupType => ({ combinator: 'and', not, rules })
 
@@ -201,5 +202,18 @@ describe('neighbor', () => {
     expect(neighbor(cards, 'a', -1)).toBeNull()
     expect(neighbor(cards, 'c', 1)).toBeNull()
     expect(neighbor(cards, 'z', 1)).toBeNull()
+  })
+})
+
+describe('tagsForPrint', () => {
+  const tag = (tag_id: string, kind: string) => ({ tag_id, slug: tag_id, label: tag_id, kind, source: 'scryfall' })
+  const tags = [tag('burn', 'oracle'), tag('lightning', 'art'), tag('goblin', 'art')]
+
+  it('keeps the oracle tags and only the art tags of the shown print', () => {
+    expect(tagsForPrint(tags, { art_tag_ids: ['goblin'] }).map((t) => t.tag_id)).toEqual(['burn', 'goblin'])
+  })
+
+  it('keeps every tag when no print is shown', () => {
+    expect(tagsForPrint(tags, undefined)).toBe(tags)
   })
 })

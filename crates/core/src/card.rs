@@ -84,6 +84,8 @@ pub struct Print {
     pub image_small: Option<String>,
     pub price_eur: Option<f64>,
     pub price_usd: Option<f64>,
+    /// Art tags sit on an illustration, so each print has its own, sorted.
+    pub art_tag_ids: Vec<String>,
 }
 
 /// `None` when no card has this `oracle_id`.
@@ -260,10 +262,22 @@ fn rulings(conn: &Connection, oracle_id: &str) -> Result<Vec<Ruling>, duckdb::Er
 fn prints(conn: &Connection, oracle_id: &str) -> Result<Vec<Print>, duckdb::Error> {
     rows(
         conn,
-        "SELECT print_id, set_code, collector_number, released_at::VARCHAR, rarity, artist,
-                image_small, price_eur::DOUBLE, price_usd::DOUBLE
-         FROM catalog.prints
-         WHERE oracle_id = ?
+        "WITH art AS (
+             SELECT pi.print_id, list_sort(list_distinct(list(ct.tag_id))) AS tag_ids
+             FROM catalog.prints AS p
+             JOIN catalog.print_illustrations AS pi ON pi.print_id = p.print_id
+             JOIN catalog.card_tags AS ct
+               ON ct.target_kind = 'illustration' AND ct.target_id = pi.illustration_id
+             JOIN catalog.tags AS t ON t.tag_id = ct.tag_id
+             WHERE p.oracle_id = $1
+             GROUP BY pi.print_id
+         )
+         SELECT p.print_id, set_code, collector_number, released_at::VARCHAR, rarity, artist,
+                image_small, price_eur::DOUBLE, price_usd::DOUBLE,
+                to_json(coalesce(art.tag_ids, []))::VARCHAR
+         FROM catalog.prints AS p
+         LEFT JOIN art ON art.print_id = p.print_id
+         WHERE p.oracle_id = $1
          ORDER BY released_at DESC, set_code, TRY_CAST(collector_number AS INTEGER), collector_number",
         oracle_id,
         |row| {
@@ -277,6 +291,7 @@ fn prints(conn: &Connection, oracle_id: &str) -> Result<Vec<Print>, duckdb::Erro
                 image_small: row.get(6)?,
                 price_eur: row.get(7)?,
                 price_usd: row.get(8)?,
+                art_tag_ids: json_list(row, 9)?,
             })
         },
     )

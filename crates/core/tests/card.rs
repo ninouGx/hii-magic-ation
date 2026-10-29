@@ -101,3 +101,29 @@ fn rulings_are_listed_in_date_order() {
             .all(|pair| pair[0].published_at <= pair[1].published_at)
     );
 }
+
+#[test]
+fn each_print_lists_the_art_tags_of_its_own_illustration() {
+    let card = detail("Lightning Bolt");
+
+    let art: std::collections::BTreeSet<&str> = card
+        .tags
+        .iter()
+        .filter(|tag| tag.kind == "art")
+        .map(|tag| tag.tag_id.as_str())
+        .collect();
+    let per_print: std::collections::BTreeSet<&str> = card
+        .prints
+        .iter()
+        .flat_map(|print| print.art_tag_ids.iter().map(String::as_str))
+        .collect();
+    let distinct_sets: std::collections::BTreeSet<&Vec<String>> =
+        card.prints.iter().map(|print| &print.art_tag_ids).collect();
+    assert_eq!(per_print, art);
+    assert!(distinct_sets.len() > 1, "prints with other art differ");
+    assert!(
+        card.prints
+            .iter()
+            .all(|print| print.art_tag_ids.windows(2).all(|pair| pair[0] < pair[1]))
+    );
+}

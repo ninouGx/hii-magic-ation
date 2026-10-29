@@ -143,6 +143,7 @@ export type CardDetail = CardFace & {
     image_small: string | null
     price_eur: number | null
     price_usd: number | null
+    art_tag_ids: string[]
   }[]
 }
 
