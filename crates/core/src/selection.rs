@@ -416,7 +416,7 @@ const CARD_COLUMNS: &str = "c.name, c.mana_cost, c.type_line, c.cmc,
 
 fn cards(conn: &Connection, selection_id: &str) -> Result<Vec<SelectionCard>, SelectionError> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT sc.oracle_id, {CARD_COLUMNS}, sc.quantity, sc.print_id, sc.category
+        "SELECT sc.oracle_id, {CARD_COLUMNS}, sc.quantity, p.print_id, sc.category
          FROM selection_cards AS sc
          LEFT JOIN catalog.cards AS c ON c.oracle_id = sc.oracle_id
          LEFT JOIN catalog.prints AS p ON p.print_id = sc.print_id
@@ -444,6 +444,7 @@ fn cards(conn: &Connection, selection_id: &str) -> Result<Vec<SelectionCard>, Se
 }
 
 /// A commander a sync removed from the catalog comes back without a name.
+/// A print a sync removed comes back as `None`, so a later edit never sends it again.
 fn card_row(
     conn: &Connection,
     oracle_id: &str,
@@ -452,7 +453,7 @@ fn card_row(
     let found = conn
         .query_row(
             &format!(
-                "SELECT {CARD_COLUMNS}
+                "SELECT {CARD_COLUMNS}, p.print_id
              FROM catalog.cards AS c
              LEFT JOIN catalog.prints AS p ON p.print_id = ?
              LEFT JOIN catalog.prints AS dp ON dp.print_id = c.default_print_id
@@ -469,7 +470,7 @@ fn card_row(
                     image_small: row.get(4)?,
                     double_faced: row.get(5)?,
                     quantity: 1,
-                    print_id: print_id.map(str::to_owned),
+                    print_id: row.get(6)?,
                     category: None,
                 })
             },
@@ -482,7 +483,7 @@ fn card_row(
         type_line: None,
         cmc: None,
         quantity: 1,
-        print_id: print_id.map(str::to_owned),
+        print_id: None,
         image_small: None,
         double_faced: false,
         category: None,

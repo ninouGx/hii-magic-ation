@@ -423,3 +423,33 @@ fn commander_without_a_chosen_print_shows_its_default_print() {
     assert_eq!(commander.print_id, None);
     assert!(commander.image_small.is_some());
 }
+
+#[test]
+fn print_removed_by_a_sync_falls_back_and_never_blocks_an_edit() {
+    let (_dir, db) = fresh_db();
+    let conn = db.connection().unwrap();
+    let deck = with_commander(&db, "Dragonlord Atarka");
+    let deck = add(&db, &deck, "Lightning Bolt");
+    conn.execute_batch(
+        "UPDATE selections SET commander_print_id = 'gone';
+         UPDATE selection_cards SET print_id = 'gone';",
+    )
+    .unwrap();
+
+    let deck = selection::get(&conn, &deck.selection_id).unwrap();
+    let commander = deck.commander.clone().unwrap();
+    let bolt = deck.cards[0].clone();
+    let mut renamed = meta(&db, "Renamed", Some("Dragonlord Atarka"), None);
+    renamed.commander_print_id = commander.print_id.clone();
+    let change = CardChange {
+        quantity: 2,
+        print_id: bolt.print_id.clone(),
+        category: None,
+    };
+
+    assert_eq!(commander.print_id, None);
+    assert!(commander.image_small.is_some());
+    assert_eq!(bolt.print_id, None);
+    assert!(selection::update(&conn, &deck.selection_id, &renamed).is_ok());
+    assert!(selection::set_card(&conn, &deck.selection_id, &bolt.oracle_id, &change).is_ok());
+}
