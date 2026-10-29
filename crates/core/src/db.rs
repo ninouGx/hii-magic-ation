@@ -10,7 +10,10 @@ pub const CATALOG_SCHEMA: &str = "catalog";
 pub const CATALOG_NEW_FILE: &str = "catalog.duckdb.new";
 
 /// Applied in order, once each. Never edit a released migration, add the next one.
-const USER_MIGRATIONS: &[(i32, &str)] = &[(1, include_str!("../sql/user/001_selections.sql"))];
+const USER_MIGRATIONS: &[(i32, &str)] = &[
+    (1, include_str!("../sql/user/001_selections.sql")),
+    (2, include_str!("../sql/user/002_commander_prints.sql")),
+];
 
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {

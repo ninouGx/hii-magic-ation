@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { fetchSelections } from '../api'
 import type { ActiveSelection } from './activeSelection'
-import { DECK_SIZE } from './deck'
+import type { Selection } from '../api'
+import { DECK_SIZE, savedPrint } from './deck'
 
 /** Picks the selection that the Explorer adds cards to. */
 export function SelectionPicker({
@@ -125,5 +126,31 @@ export function AddAllButton({ filter, total, active }: { filter: unknown; total
         Cancel
       </button>
     </span>
+  )
+}
+
+/** Under the image of the detail window: the print shown is the one the selection uses, or a button to make it so. */
+export function PrintChoice({
+  deck,
+  oracleId,
+  printId,
+  defaultPrintId,
+  pending,
+  onChoose,
+}: {
+  deck: Selection
+  oracleId: string
+  printId: string
+  defaultPrintId: string | null
+  pending: boolean
+  onChoose: (printId: string) => void
+}) {
+  const saved = savedPrint(deck, oracleId, defaultPrintId)
+  if (saved === undefined) return null
+  if (saved === printId) return <p className="hint">Print used in {deck.name}</p>
+  return (
+    <button type="button" disabled={pending} onClick={() => onChoose(printId)}>
+      Use this print in {deck.name}
+    </button>
   )
 }

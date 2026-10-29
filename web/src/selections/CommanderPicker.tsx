@@ -9,11 +9,12 @@ type Props = {
   label: string
   current: SelectionCard | null
   onChange: (oracleId: string | null) => void
+  onOpen: (oracleId: string) => void
   disabled?: boolean
 }
 
 /** Searches commander-eligible cards by name, most played first. */
-export default function CommanderPicker({ label, current, onChange, disabled }: Props) {
+export default function CommanderPicker({ label, current, onChange, onOpen, disabled }: Props) {
   const [text, setText] = useState('')
   const [query, setQuery] = useState('')
 
@@ -51,7 +52,13 @@ export default function CommanderPicker({ label, current, onChange, disabled }: 
       <legend>{label}</legend>
       {current ? (
         <p>
-          <strong>{current.name ?? 'Card no longer in the catalog'}</strong>{' '}
+          {current.name ? (
+            <button type="button" className="card-name" onClick={() => onOpen(current.oracle_id)}>
+              <strong>{current.name}</strong>
+            </button>
+          ) : (
+            <strong>Card no longer in the catalog</strong>
+          )}{' '}
           <button type="button" onClick={() => onChange(null)}>
             Remove
           </button>

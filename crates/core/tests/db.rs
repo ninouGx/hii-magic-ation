@@ -156,15 +156,18 @@ fn user_schema_is_created_once_and_keeps_its_rows() {
 
     let db = Db::open(dir.path()).unwrap();
     let conn = db.connection().unwrap();
-    let (names, versions): (i64, i64) = conn
+    let (names, versions, distinct): (i64, i64, i64) = conn
         .query_row(
-            "SELECT (SELECT count(*) FROM selections), (SELECT count(*) FROM user_schema_version)",
+            "SELECT (SELECT count(*) FROM selections),
+                    (SELECT count(*) FROM user_schema_version),
+                    (SELECT count(DISTINCT version) FROM user_schema_version)",
             [],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .unwrap();
 
-    assert_eq!((names, versions), (1, 1));
+    assert_eq!(names, 1);
+    assert_eq!(versions, distinct, "each migration runs once");
 }
 
 #[test]

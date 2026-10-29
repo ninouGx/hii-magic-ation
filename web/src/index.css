@@ -511,7 +511,8 @@ button {
   width: 3.5rem;
 }
 
-.type-group .card-name {
+.type-group .card-name,
+.commander-picker .card-name {
   border: none;
   background: none;
   padding: 0;

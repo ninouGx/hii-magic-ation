@@ -12,7 +12,24 @@ fn meta(db: &Db, name: &str, commander: Option<&str>, partner: Option<&str>) -> 
         notes: String::new(),
         commander_oracle_id: commander.map(|card| oracle_id(db, card)),
         partner_oracle_id: partner.map(|card| oracle_id(db, card)),
+        commander_print_id: None,
+        partner_print_id: None,
     }
+}
+
+/// A print of the card other than its default one, with its small image.
+fn other_print(db: &Db, card: &str) -> (String, String) {
+    db.connection()
+        .unwrap()
+        .query_row(
+            "SELECT p.print_id, p.image_small FROM catalog.prints AS p
+             JOIN catalog.cards AS c USING (oracle_id)
+             WHERE c.name = ? AND p.print_id <> c.default_print_id AND p.image_small IS NOT NULL
+             ORDER BY p.print_id LIMIT 1",
+            [card],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
 }
 
 fn add(db: &Db, selection: &Selection, card: &str) -> Selection {
@@ -340,4 +357,69 @@ fn blank_name_is_refused() {
         selection::create(&conn, "  "),
         Err(SelectionError::EmptyName)
     ));
+}
+
+#[test]
+fn commander_print_is_saved_and_survives_a_restart() {
+    let (print_id, image) = {
+        let (_, db) = fresh_db();
+        other_print(&db, "Dragonlord Atarka")
+    };
+    let dir = {
+        let (dir, db) = fresh_db();
+        let deck = with_commander(&db, "Dragonlord Atarka");
+        let mut chosen = meta(&db, "Deck", Some("Dragonlord Atarka"), None);
+        chosen.commander_print_id = Some(print_id.clone());
+        let saved =
+            selection::update(&db.connection().unwrap(), &deck.selection_id, &chosen).unwrap();
+        assert_eq!(
+            saved.commander.unwrap().print_id.as_deref(),
+            Some(print_id.as_str())
+        );
+        dir
+    };
+
+    let db = Db::open(dir.path()).unwrap();
+    let conn = db.connection().unwrap();
+    let id = selection::list(&conn).unwrap()[0].selection_id.clone();
+    let commander = selection::get(&conn, &id).unwrap().commander.unwrap();
+
+    assert_eq!(commander.print_id.as_deref(), Some(print_id.as_str()));
+    assert_eq!(commander.image_small.as_deref(), Some(image.as_str()));
+}
+
+#[test]
+fn commander_print_of_another_card_is_refused() {
+    let (_dir, db) = fresh_db();
+    let deck = with_commander(&db, "Dragonlord Atarka");
+    let (bolt_print, _) = other_print(&db, "Lightning Bolt");
+    let mut chosen = meta(&db, "Deck", Some("Dragonlord Atarka"), None);
+    chosen.commander_print_id = Some(bolt_print);
+
+    let result = selection::update(&db.connection().unwrap(), &deck.selection_id, &chosen);
+
+    assert!(matches!(result, Err(SelectionError::ForeignPrint { .. })));
+}
+
+#[test]
+fn partner_print_without_a_partner_is_refused() {
+    let (_dir, db) = fresh_db();
+    let deck = with_commander(&db, "Dragonlord Atarka");
+    let (print_id, _) = other_print(&db, "Dragonlord Atarka");
+    let mut chosen = meta(&db, "Deck", Some("Dragonlord Atarka"), None);
+    chosen.partner_print_id = Some(print_id);
+
+    let result = selection::update(&db.connection().unwrap(), &deck.selection_id, &chosen);
+
+    assert!(matches!(result, Err(SelectionError::PrintWithoutCard(_))));
+}
+
+#[test]
+fn commander_without_a_chosen_print_shows_its_default_print() {
+    let (_dir, db) = fresh_db();
+
+    let commander = with_commander(&db, "Dragonlord Atarka").commander.unwrap();
+
+    assert_eq!(commander.print_id, None);
+    assert!(commander.image_small.is_some());
 }

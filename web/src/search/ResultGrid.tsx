@@ -2,7 +2,8 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { searchCards } from '../api'
 import type { ActiveSelection } from '../selections/activeSelection'
-import { AddAllButton, CardActions } from '../selections/SelectionControls'
+import { savedPrint } from '../selections/deck'
+import { AddAllButton, CardActions, PrintChoice } from '../selections/SelectionControls'
 import CardDetail from './CardDetail'
 import CardTile from './CardTile'
 import { neighbor } from './neighbor'
@@ -101,6 +102,22 @@ export default function ResultGrid({ filter, enabled, sort, openCard, onOpenCard
           onNavigate={onOpenCard}
           onClose={() => onOpenCard(null)}
           actions={(name) => <CardActions oracleId={openCard} name={name} active={active} />}
+          initialPrint={active.selection && savedPrint(active.selection, openCard, null)}
+          printAction={(printId, card) =>
+            active.selection && (
+              <PrintChoice
+                deck={active.selection}
+                oracleId={card.oracle_id}
+                printId={printId}
+                defaultPrintId={card.default_print_id}
+                pending={active.choosePrint.isPending}
+                onChoose={(chosen) =>
+                  active.selection &&
+                  active.choosePrint.mutate({ id: active.selection.selection_id, oracleId: card.oracle_id, printId: chosen })
+                }
+              />
+            )
+          }
         />
       )}
     </section>

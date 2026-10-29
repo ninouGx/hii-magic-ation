@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SelectionCard } from '../api'
-import { alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, membership } from './deck'
+import { alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, membership, printRequest, selectionMeta } from './deck'
 
 const card = (name: string | null, type_line: string | null, quantity = 1): SelectionCard => ({
   oracle_id: name ?? 'gone',
@@ -120,5 +120,40 @@ describe('membership', () => {
     const members = membership({ commander: card('cmd', null), partner: null, cards: [card('cmd', null, 2)] })
 
     expect(members.get('cmd')).toEqual({ quantity: 2, commander: true })
+  })
+})
+
+describe('print choice', () => {
+  const withPrint = (name: string, print_id: string | null, quantity = 1) => ({ ...card(name, null, quantity), print_id, category: 'Ramp' })
+  const deck = {
+    name: 'Deck',
+    notes: 'n',
+    commander: withPrint('cmd', 'cmd-old'),
+    partner: withPrint('ptn', null),
+    cards: [withPrint('bolt', null, 2)],
+  }
+
+  it('reads the meta of a selection, prints included', () => {
+    expect(selectionMeta(deck)).toEqual({
+      name: 'Deck',
+      notes: 'n',
+      commander_oracle_id: 'cmd',
+      partner_oracle_id: 'ptn',
+      commander_print_id: 'cmd-old',
+      partner_print_id: null,
+    })
+  })
+
+  it('saves a commander or partner print in the selection meta', () => {
+    expect(printRequest(deck, 'cmd', 'cmd-new')).toEqual({ meta: { ...selectionMeta(deck), commander_print_id: 'cmd-new' } })
+    expect(printRequest(deck, 'ptn', 'ptn-new')).toEqual({ meta: { ...selectionMeta(deck), partner_print_id: 'ptn-new' } })
+  })
+
+  it('saves a list card print and keeps its copies and category', () => {
+    expect(printRequest(deck, 'bolt', 'bolt-new')).toEqual({ card: { quantity: 2, print_id: 'bolt-new', category: 'Ramp' } })
+  })
+
+  it('has nothing to save for a card outside the selection', () => {
+    expect(printRequest(deck, 'other', 'x')).toBeNull()
   })
 })

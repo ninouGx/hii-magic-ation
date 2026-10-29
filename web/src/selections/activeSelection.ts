@@ -1,9 +1,37 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { HttpError, addFilteredCards, addSelectionCard, fetchCard, fetchSelection, removeSelectionCard, type Selection } from '../api'
-import { membership, type Membership } from './deck'
+import {
+  HttpError,
+  addFilteredCards,
+  addSelectionCard,
+  fetchCard,
+  fetchSelection,
+  removeSelectionCard,
+  setSelectionCard,
+  updateSelection,
+  type Selection,
+} from '../api'
+import { membership, printRequest, type Membership } from './deck'
 
 type CardTarget = { id: string; oracleId: string }
+
+/** Saves the print a selection uses for one of its cards, commanders included. */
+export function useChoosePrint(selectionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, oracleId, printId }: CardTarget & { printId: string }) => {
+      const deck = queryClient.getQueryData<Selection>(['selection', id])
+      const request = deck && printRequest(deck, oracleId, printId)
+      if (!request) throw new Error('This card is no longer in the selection.')
+      return 'meta' in request ? updateSelection(id, request.meta) : setSelectionCard(id, oracleId, request.card)
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['selection', updated.selection_id], updated)
+      void queryClient.invalidateQueries({ queryKey: ['selections'] })
+    },
+    scope: { id: `selection-${selectionId}` },
+  })
+}
 
 const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G']
 
@@ -34,6 +62,7 @@ export function useActiveSelection(selectionId: string | null) {
     onSuccess: applied,
     scope,
   })
+  const choosePrint = useChoosePrint(selectionId)
   const addAll = useMutation({
     mutationFn: ({ id, filter }: { id: string; filter: unknown }) => addFilteredCards(id, filter),
     onSuccess: (_, { id }) => {
@@ -68,12 +97,14 @@ export function useActiveSelection(selectionId: string | null) {
       leaderCards.find((card) => card.error)?.error ??
       current(add) ??
       current(remove) ??
+      current(choosePrint) ??
       current(addAll),
     missing,
     identity: selectionId === null || missing ? null : identity,
     members,
     add,
     remove,
+    choosePrint,
     addAll,
   }
 }

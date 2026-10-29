@@ -13,7 +13,9 @@ import {
 import CardDetail from '../search/CardDetail'
 import { neighbor } from '../search/neighbor'
 import CommanderPicker from './CommanderPicker'
-import { DECK_SIZE, alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, type AlertGroup } from './deck'
+import { useChoosePrint } from './activeSelection'
+import { DECK_SIZE, alertLabel, alertText, alertsByCard, groupAlerts, groupByType, isSerious, selectionMeta, type AlertGroup } from './deck'
+import { PrintChoice } from './SelectionControls'
 
 const OPEN_ALERT_LIMIT = 5
 
@@ -51,6 +53,7 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
     onSuccess: applied,
     scope,
   })
+  const choosePrint = useChoosePrint(selectionId)
   const deletion = useMutation({
     mutationFn: () => deleteSelection(selectionId),
     onSuccess: () => {
@@ -65,16 +68,11 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
   if (!selection.data) return <p>Loading…</p>
   const deck = selection.data
 
-  const currentMeta = (): SelectionMeta => ({
-    name: deck.name,
-    notes: deck.notes,
-    commander_oracle_id: deck.commander?.oracle_id ?? null,
-    partner_oracle_id: deck.partner?.oracle_id ?? null,
-  })
+  const currentMeta = (): SelectionMeta => selectionMeta(deck)
   const groups = groupByType(deck.cards)
   const ordered = [...[deck.commander, deck.partner].flatMap((card) => (card ? [card] : [])), ...groups.flatMap((group) => group.cards)]
   const alerts = alertsByCard(deck.alerts)
-  const error = meta.error ?? quantity.error ?? removal.error ?? deletion.error
+  const error = meta.error ?? quantity.error ?? removal.error ?? choosePrint.error ?? deletion.error
 
   return (
     <section className="selection" aria-label={deck.name}>
@@ -91,12 +89,15 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
         <CommanderPicker
           label="Commander"
           current={deck.commander}
+          onOpen={onOpenCard}
           disabled={meta.isPending}
           onChange={(oracleId) =>
             meta.mutate({
               ...currentMeta(),
               commander_oracle_id: oracleId,
+              commander_print_id: null,
               partner_oracle_id: oracleId ? currentMeta().partner_oracle_id : null,
+              partner_print_id: oracleId ? currentMeta().partner_print_id : null,
             })
           }
         />
@@ -104,8 +105,9 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
           <CommanderPicker
             label="Partner"
             current={deck.partner}
+            onOpen={onOpenCard}
             disabled={meta.isPending}
-            onChange={(oracleId) => meta.mutate({ ...currentMeta(), partner_oracle_id: oracleId })}
+            onChange={(oracleId) => meta.mutate({ ...currentMeta(), partner_oracle_id: oracleId, partner_print_id: null })}
           />
         )}
       </div>
@@ -167,6 +169,17 @@ export default function SelectionView({ selectionId, openCard, onOpenCard, onDel
           next={neighbor(ordered, openCard, 1)}
           onNavigate={onOpenCard}
           onClose={() => onOpenCard(null)}
+          initialPrint={ordered.find((card) => card.oracle_id === openCard)?.print_id}
+          printAction={(printId, card) => (
+            <PrintChoice
+              deck={deck}
+              oracleId={card.oracle_id}
+              printId={printId}
+              defaultPrintId={card.default_print_id}
+              pending={choosePrint.isPending}
+              onChoose={(chosen) => choosePrint.mutate({ id: selectionId, oracleId: card.oracle_id, printId: chosen })}
+            />
+          )}
         />
       )}
     </section>

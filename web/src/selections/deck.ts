@@ -1,4 +1,4 @@
-import type { Selection, SelectionAlert, SelectionCard } from '../api'
+import type { CardChange, Selection, SelectionAlert, SelectionCard, SelectionMeta } from '../api'
 
 /** A Commander deck holds 100 cards, commanders included. */
 export const DECK_SIZE = 100
@@ -142,4 +142,35 @@ export function membership(deck: Pick<Selection, 'commander' | 'partner' | 'card
     if (leader) members.set(leader.oracle_id, { quantity: members.get(leader.oracle_id)?.quantity ?? 0, commander: true })
   }
   return members
+}
+
+type DeckParts = Pick<Selection, 'name' | 'notes' | 'commander' | 'partner' | 'cards'>
+
+export function selectionMeta(deck: DeckParts): SelectionMeta {
+  return {
+    name: deck.name,
+    notes: deck.notes,
+    commander_oracle_id: deck.commander?.oracle_id ?? null,
+    partner_oracle_id: deck.partner?.oracle_id ?? null,
+    commander_print_id: deck.commander?.print_id ?? null,
+    partner_print_id: deck.partner?.print_id ?? null,
+  }
+}
+
+/** Commanders keep their print in the selection meta, list cards in their own row. */
+export function printRequest(
+  deck: DeckParts,
+  oracleId: string,
+  printId: string,
+): { meta: SelectionMeta } | { card: CardChange } | null {
+  if (deck.commander?.oracle_id === oracleId) return { meta: { ...selectionMeta(deck), commander_print_id: printId } }
+  if (deck.partner?.oracle_id === oracleId) return { meta: { ...selectionMeta(deck), partner_print_id: printId } }
+  const card = deck.cards.find((candidate) => candidate.oracle_id === oracleId)
+  return card ? { card: { quantity: card.quantity, print_id: printId, category: card.category } } : null
+}
+
+/** The print a selection uses for a card, undefined when the card is not in it. */
+export function savedPrint(deck: DeckParts, oracleId: string, defaultPrintId: string | null): string | null | undefined {
+  const card = [deck.commander, deck.partner, ...deck.cards].find((candidate) => candidate?.oracle_id === oracleId)
+  return card ? (card.print_id ?? defaultPrintId) : undefined
 }

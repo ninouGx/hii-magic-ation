@@ -17,6 +17,8 @@ pub enum SelectionError {
     UnknownCard(String),
     #[error("print {print_id} is not a print of {oracle_id}")]
     ForeignPrint { print_id: String, oracle_id: String },
+    #[error("print {0} has no commander or partner to belong to")]
+    PrintWithoutCard(String),
     #[error("quantity must be at least 1")]
     EmptyQuantity,
     #[error("a selection needs a name")]
@@ -47,6 +49,11 @@ pub struct SelectionMeta {
     pub notes: String,
     pub commander_oracle_id: Option<String>,
     pub partner_oracle_id: Option<String>,
+    /// `None` keeps the default print of the card.
+    #[serde(default)]
+    pub commander_print_id: Option<String>,
+    #[serde(default)]
+    pub partner_print_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -185,22 +192,32 @@ pub fn update(
     if meta.partner_oracle_id.is_some() && meta.partner_oracle_id == meta.commander_oracle_id {
         return Err(SelectionError::PartnerIsCommander);
     }
-    for oracle_id in [&meta.commander_oracle_id, &meta.partner_oracle_id]
-        .into_iter()
-        .flatten()
-    {
-        ensure_card(conn, oracle_id)?;
+    for (oracle_id, print_id) in [
+        (&meta.commander_oracle_id, &meta.commander_print_id),
+        (&meta.partner_oracle_id, &meta.partner_print_id),
+    ] {
+        if let Some(oracle_id) = oracle_id {
+            ensure_card(conn, oracle_id)?;
+        }
+        if let Some(print_id) = print_id {
+            let oracle_id = oracle_id
+                .as_deref()
+                .ok_or_else(|| SelectionError::PrintWithoutCard(print_id.clone()))?;
+            ensure_print_of(conn, print_id, oracle_id)?;
+        }
     }
     conn.execute(
         "UPDATE selections
          SET name = ?, notes = ?, commander_oracle_id = ?, partner_oracle_id = ?,
-             updated_at = current_timestamp
+             commander_print_id = ?, partner_print_id = ?, updated_at = current_timestamp
          WHERE selection_id = ?",
         params![
             meta.name,
             meta.notes,
             meta.commander_oracle_id,
             meta.partner_oracle_id,
+            meta.commander_print_id,
+            meta.partner_print_id,
             selection_id
         ],
     )?;
@@ -238,19 +255,7 @@ pub fn set_card(
         return Err(SelectionError::EmptyQuantity);
     }
     if let Some(print_id) = &change.print_id {
-        let owner: Option<String> = conn
-            .query_row(
-                "SELECT oracle_id FROM catalog.prints WHERE print_id = ?",
-                [print_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-        if owner.as_deref() != Some(oracle_id) {
-            return Err(SelectionError::ForeignPrint {
-                print_id: print_id.clone(),
-                oracle_id: oracle_id.to_owned(),
-            });
-        }
+        ensure_print_of(conn, print_id, oracle_id)?;
     }
     conn.execute(
         "INSERT INTO selection_cards (selection_id, oracle_id, quantity, print_id, category)
@@ -313,40 +318,78 @@ pub fn add_filtered(
     })
 }
 
-pub fn get(conn: &Connection, selection_id: &str) -> Result<Selection, SelectionError> {
-    let (name, notes, commander_id, partner_id, updated_at): (
-        String,
-        String,
-        Option<String>,
-        Option<String>,
-        String,
-    ) = conn
+fn ensure_print_of(
+    conn: &Connection,
+    print_id: &str,
+    oracle_id: &str,
+) -> Result<(), SelectionError> {
+    let owner: Option<String> = conn
         .query_row(
-            "SELECT name, notes, commander_oracle_id, partner_oracle_id, updated_at::VARCHAR
+            "SELECT oracle_id FROM catalog.prints WHERE print_id = ?",
+            [print_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if owner.as_deref() == Some(oracle_id) {
+        Ok(())
+    } else {
+        Err(SelectionError::ForeignPrint {
+            print_id: print_id.to_owned(),
+            oracle_id: oracle_id.to_owned(),
+        })
+    }
+}
+
+struct SelectionRow {
+    name: String,
+    notes: String,
+    commander_id: Option<String>,
+    partner_id: Option<String>,
+    commander_print: Option<String>,
+    partner_print: Option<String>,
+    updated_at: String,
+}
+
+pub fn get(conn: &Connection, selection_id: &str) -> Result<Selection, SelectionError> {
+    let row = conn
+        .query_row(
+            "SELECT name, notes, commander_oracle_id, partner_oracle_id,
+                    commander_print_id, partner_print_id, updated_at::VARCHAR
              FROM selections WHERE selection_id = ?",
             [selection_id],
             |row| {
-                Ok((
-                    row.get(0)?,
-                    row.get(1)?,
-                    row.get(2)?,
-                    row.get(3)?,
-                    row.get(4)?,
-                ))
+                Ok(SelectionRow {
+                    name: row.get(0)?,
+                    notes: row.get(1)?,
+                    commander_id: row.get(2)?,
+                    partner_id: row.get(3)?,
+                    commander_print: row.get(4)?,
+                    partner_print: row.get(5)?,
+                    updated_at: row.get(6)?,
+                })
             },
         )
         .optional()?
         .ok_or(SelectionError::NotFound)?;
+    let SelectionRow {
+        name,
+        notes,
+        commander_id,
+        partner_id,
+        commander_print,
+        partner_print,
+        updated_at,
+    } = row;
 
     let cards = cards(conn, selection_id)?;
     let commanders: Vec<&String> = [&commander_id, &partner_id].into_iter().flatten().collect();
     let commander = commander_id
         .as_deref()
-        .map(|id| card_row(conn, id))
+        .map(|id| card_row(conn, id, commander_print.as_deref()))
         .transpose()?;
     let partner = partner_id
         .as_deref()
-        .map(|id| card_row(conn, id))
+        .map(|id| card_row(conn, id, partner_print.as_deref()))
         .transpose()?;
     let in_list: i64 = cards
         .iter()
@@ -401,17 +444,21 @@ fn cards(conn: &Connection, selection_id: &str) -> Result<Vec<SelectionCard>, Se
 }
 
 /// A commander a sync removed from the catalog comes back without a name.
-fn card_row(conn: &Connection, oracle_id: &str) -> Result<SelectionCard, SelectionError> {
+fn card_row(
+    conn: &Connection,
+    oracle_id: &str,
+    print_id: Option<&str>,
+) -> Result<SelectionCard, SelectionError> {
     let found = conn
         .query_row(
             &format!(
                 "SELECT {CARD_COLUMNS}
              FROM catalog.cards AS c
-             LEFT JOIN catalog.prints AS p ON false
+             LEFT JOIN catalog.prints AS p ON p.print_id = ?
              LEFT JOIN catalog.prints AS dp ON dp.print_id = c.default_print_id
              WHERE c.oracle_id = ?"
             ),
-            [oracle_id],
+            params![print_id, oracle_id],
             |row| {
                 Ok(SelectionCard {
                     oracle_id: oracle_id.to_owned(),
@@ -422,7 +469,7 @@ fn card_row(conn: &Connection, oracle_id: &str) -> Result<SelectionCard, Selecti
                     image_small: row.get(4)?,
                     double_faced: row.get(5)?,
                     quantity: 1,
-                    print_id: None,
+                    print_id: print_id.map(str::to_owned),
                     category: None,
                 })
             },
@@ -435,7 +482,7 @@ fn card_row(conn: &Connection, oracle_id: &str) -> Result<SelectionCard, Selecti
         type_line: None,
         cmc: None,
         quantity: 1,
-        print_id: None,
+        print_id: print_id.map(str::to_owned),
         image_small: None,
         double_faced: false,
         category: None,

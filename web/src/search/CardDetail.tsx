@@ -14,10 +14,14 @@ type Props = {
   onClose: () => void
   /** Renders extra controls in the header, given the card name once it is loaded. */
   actions?: (name: string) => ReactNode
+  /** The print to show first, the default print when null. */
+  initialPrint?: string | null
+  /** Renders controls under the image, given the print on display. */
+  printAction?: (printId: string, card: Card) => ReactNode
 }
 
 /** Escape and a click on the backdrop close it, the arrow keys move through the result. */
-export default function CardDetail({ oracleId, previous, next, onNavigate, onClose, actions }: Props) {
+export default function CardDetail({ oracleId, previous, next, onNavigate, onClose, actions, initialPrint, printAction }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const queryClient = useQueryClient()
   const card = useQuery({ queryKey: ['card', oracleId], queryFn: () => fetchCard(oracleId), staleTime: Infinity })
@@ -75,15 +79,23 @@ export default function CardDetail({ oracleId, previous, next, onNavigate, onClo
           </button>
         </header>
         {card.isError && <p role="alert">{card.error.message}</p>}
-        {card.data ? <CardContent key={card.data.oracle_id} card={card.data} /> : !card.isError && <p>Loading…</p>}
+        {card.data ? <CardContent key={card.data.oracle_id} card={card.data} initialPrint={initialPrint ?? null} printAction={printAction} /> : !card.isError && <p>Loading…</p>}
       </div>
     </dialog>
   )
 }
 
-function CardContent({ card }: { card: Card }) {
+function CardContent({
+  card,
+  initialPrint,
+  printAction,
+}: {
+  card: Card
+  initialPrint: string | null
+  printAction?: Props['printAction']
+}) {
   const [face, setFace] = useState<Face>('front')
-  const [printId, setPrintId] = useState(card.default_print_id)
+  const [printId, setPrintId] = useState(initialPrint ?? card.default_print_id)
   const print = card.prints.find((candidate) => candidate.print_id === printId) ?? card.prints[0]
   const faces: CardFace[] = card.faces.length > 0 ? card.faces : [card]
 
@@ -113,6 +125,7 @@ function CardContent({ card }: { card: Card }) {
             {print.price_eur !== null && `, ${print.price_eur.toFixed(2)} €`}
           </figcaption>
         )}
+        {print && printAction?.(print.print_id, card)}
       </figure>
 
       <div className="card-detail-text">

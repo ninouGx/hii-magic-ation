@@ -16,6 +16,7 @@ impl From<SelectionError> for ApiError {
             SelectionError::NotFound => StatusCode::NOT_FOUND,
             SelectionError::UnknownCard(_)
             | SelectionError::ForeignPrint { .. }
+            | SelectionError::PrintWithoutCard(_)
             | SelectionError::EmptyQuantity
             | SelectionError::EmptyName
             | SelectionError::PartnerIsCommander

@@ -195,6 +195,9 @@ export type SelectionMeta = {
   notes: string
   commander_oracle_id: string | null
   partner_oracle_id: string | null
+  /** Null keeps the default print of the card. */
+  commander_print_id: string | null
+  partner_print_id: string | null
 }
 
 export type CardChange = { quantity: number; print_id: string | null; category: string | null }
